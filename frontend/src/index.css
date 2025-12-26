@@ -1,0 +1,435 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================
+   HackFrank Brand Theme - shadcn + Tailwind v4
+   ============================================ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  /* HackFrank Custom Colors */
+  --color-brand-cyan: #69EDFF;
+  --color-brand-cyan-light: #8FF2FF;
+  --color-brand-cyan-dark: #4DDAF0;
+  --color-success: #4ADE80;
+  --color-warning: #FBBF24;
+  --color-error: #F87171;
+  --color-info: #69EDFF;
+  
+  /* Typography */
+  --font-sans: 'Poppins', system-ui, sans-serif;
+}
+
+/* HackFrank Dark Theme (Default) */
+:root {
+  --radius: 0.375rem;
+  
+  /* HackFrank Colors */
+  --background: #1B1D22;
+  --foreground: #FFFFFF;
+  --card: #23262D;
+  --card-foreground: #FFFFFF;
+  --popover: #23262D;
+  --popover-foreground: #FFFFFF;
+  --primary: #69EDFF;
+  --primary-foreground: #1B1D22;
+  --secondary: #2D3139;
+  --secondary-foreground: #FFFFFF;
+  --muted: #2D3139;
+  --muted-foreground: #A0A8B8;
+  --accent: #69EDFF;
+  --accent-foreground: #1B1D22;
+  --destructive: #F87171;
+  --border: #363B45;
+  --input: #363B45;
+  --ring: #69EDFF;
+}
+
+/* Light mode override (optional) */
+.light {
+  --background: #FFFFFF;
+  --foreground: #1B1D22;
+  --card: #F8F9FA;
+  --card-foreground: #1B1D22;
+  --popover: #FFFFFF;
+  --popover-foreground: #1B1D22;
+  --primary: #69EDFF;
+  --primary-foreground: #1B1D22;
+  --secondary: #E5E7EB;
+  --secondary-foreground: #1B1D22;
+  --muted: #E5E7EB;
+  --muted-foreground: #6B7280;
+  --accent: #69EDFF;
+  --accent-foreground: #1B1D22;
+  --destructive: #F87171;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #69EDFF;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+/* ============================================
+   Subtle Grid Background with Reflection
+   ============================================ */
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: 
+    radial-gradient(ellipse 130% 100% at 50% 45%, 
+      rgba(0,0,0,0.65) 0%, 
+      rgba(0,0,0,0.4) 35%, 
+      rgba(0,0,0,0.2) 55%,
+      rgba(0,0,0,0.08) 75%,
+      transparent 90%
+    );
+  -webkit-mask-image: 
+    radial-gradient(ellipse 130% 100% at 50% 45%, 
+      rgba(0,0,0,0.65) 0%, 
+      rgba(0,0,0,0.4) 35%, 
+      rgba(0,0,0,0.2) 55%,
+      rgba(0,0,0,0.08) 75%,
+      transparent 90%
+    );
+}
+
+/* Reflection highlights - creates uneven brightness */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(ellipse 50% 35% at 25% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 75% 50%, rgba(255, 255, 255, 0.025) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 70%, rgba(255, 255, 255, 0.02) 0%, transparent 60%);
+}
+
+/* Ensure content is above grid */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   HackFrank Custom Utilities
+   ============================================ */
+
+/* Selection */
+::selection {
+  background-color: rgba(105, 237, 255, 0.3);
+  color: #FFFFFF;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #363B45;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4A5060;
+}
+
+/* Text Gradient */
+.text-gradient {
+  background: linear-gradient(135deg, #69EDFF 0%, #8FF2FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Glass & Surface Effects
+   ============================================ */
+
+.glass {
+  background: rgba(35, 38, 45, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(54, 59, 69, 0.5);
+}
+
+.glass-subtle {
+  background: rgba(35, 38, 45, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(54, 59, 69, 0.3);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(35, 38, 45, 0.5) 0%, rgba(27, 29, 34, 0.5) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(105, 237, 255, 0.08);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.glass-card:hover {
+  border-color: rgba(105, 237, 255, 0.15);
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* ============================================
+   Glow Effects
+   ============================================ */
+
+.glow {
+  box-shadow: 0 0 20px rgba(105, 237, 255, 0.2);
+}
+
+.glow-sm {
+  box-shadow: 0 0 12px rgba(105, 237, 255, 0.15);
+}
+
+.glow-lg {
+  box-shadow: 0 0 40px rgba(105, 237, 255, 0.25);
+}
+
+.icon-glow {
+  filter: drop-shadow(0 0 8px rgba(105, 237, 255, 0.4));
+}
+
+/* ============================================
+   Interactive Micro-Animations
+   ============================================ */
+
+/* Smooth transitions for all interactive elements */
+a, button, [role="button"] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle lift on interactive cards */
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Haptic press effect */
+.press-effect {
+  transition: transform 0.1s ease;
+}
+
+.press-effect:active {
+  transform: scale(0.98);
+}
+
+/* Icon hover animation */
+.icon-hover {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.icon-hover:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 6px rgba(105, 237, 255, 0.3));
+}
+
+/* Link underline animation */
+.link-hover {
+  position: relative;
+}
+
+.link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #69EDFF, transparent);
+  transition: width 0.3s ease;
+}
+
+.link-hover:hover::after {
+  width: 100%;
+}
+
+/* ============================================
+   Scroll-based Animations
+   ============================================ */
+
+/* Fade in on scroll */
+.scroll-fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: scrollFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scrollFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger delays */
+.scroll-fade-in:nth-child(1) { animation-delay: 0s; }
+.scroll-fade-in:nth-child(2) { animation-delay: 0.08s; }
+.scroll-fade-in:nth-child(3) { animation-delay: 0.16s; }
+.scroll-fade-in:nth-child(4) { animation-delay: 0.24s; }
+.scroll-fade-in:nth-child(5) { animation-delay: 0.32s; }
+.scroll-fade-in:nth-child(6) { animation-delay: 0.4s; }
+
+/* Scale in */
+.scroll-scale-in {
+  opacity: 0;
+  transform: scale(0.95);
+  animation: scrollScaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scrollScaleIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide in from left */
+.scroll-slide-left {
+  opacity: 0;
+  transform: translateX(-20px);
+  animation: scrollSlideLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scrollSlideLeft {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from right */
+.scroll-slide-right {
+  opacity: 0;
+  transform: translateX(20px);
+  animation: scrollSlideRight 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scrollSlideRight {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================
+   Legacy Animations (kept for compatibility)
+   ============================================ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(105, 237, 255, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(105, 237, 255, 0.35); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Stagger Animation Delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
