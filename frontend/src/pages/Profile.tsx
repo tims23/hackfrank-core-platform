@@ -15,7 +15,7 @@ const availableSkills = [
 
 // Current user data
 const initialUser = {
-  id: 1,
+  id: "1",
   name: "Sarah Chen",
   email: "sarah.chen@google.com",
   avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
@@ -35,7 +35,7 @@ const initialTeam = {
   skills: ["React", "Python", "ML", "TensorFlow"],
   members: [
     {
-      id: 1,
+      id: "1",
       name: "Sarah Chen",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
       role: "ML Engineer",
@@ -43,7 +43,7 @@ const initialTeam = {
       isLeader: true,
     },
     {
-      id: 2,
+      id: "2",
       name: "Marcus Johnson",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
       role: "Full Stack Dev",
@@ -51,7 +51,7 @@ const initialTeam = {
       isLeader: false,
     },
     {
-      id: 4,
+      id: "4",
       name: "David Kim",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
       role: "Data Scientist",
@@ -59,7 +59,7 @@ const initialTeam = {
       isLeader: false,
     },
     {
-      id: 6,
+      id: "6",
       name: "Tom Wilson",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
       role: "Backend Engineer",
@@ -107,7 +107,7 @@ export function Profile() {
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
     type: "makeLeader" | "kick" | "leaveTeam" | null
-    memberId: number | null
+    memberId: string | null
     memberName: string
   }>({ type: null, memberId: null, memberName: "" })
   
@@ -207,7 +207,7 @@ export function Profile() {
   }
 
   const confirmMakeLeader = () => {
-    if (confirmModal.memberId) {
+    if (confirmModal.memberId !== null) {
       setTeam({
         ...team,
         members: team.members.map(m => ({
@@ -220,7 +220,7 @@ export function Profile() {
   }
 
   const confirmKickMember = () => {
-    if (confirmModal.memberId) {
+    if (confirmModal.memberId !== null) {
       setTeam({
         ...team,
         members: team.members.filter(m => m.id !== confirmModal.memberId)
@@ -239,7 +239,7 @@ export function Profile() {
     setIsEditingTeam(false)
   }
 
-  const openConfirmModal = (type: "makeLeader" | "kick" | "leaveTeam", memberId: number, memberName: string) => {
+  const openConfirmModal = (type: "makeLeader" | "kick" | "leaveTeam", memberId: string, memberName: string) => {
     setConfirmModal({ type, memberId, memberName })
   }
 

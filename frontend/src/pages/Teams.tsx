@@ -2,147 +2,13 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { Search, X, Check, UserPlus, Plus } from "lucide-react"
 import { Button, Badge, Input } from "@/components/ui"
-
-// Available participants (those without a team)
-const availableParticipants = [
-  {
-    id: 1,
-    name: "Sarah Chen",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-    role: "ML Engineer",
-    skills: ["Python", "TensorFlow", "NLP"],
-  },
-  {
-    id: 3,
-    name: "Elena Rodriguez",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    role: "UX Designer",
-    skills: ["Figma", "Research", "Prototyping"],
-  },
-  {
-    id: 5,
-    name: "Aisha Patel",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-    role: "Product Manager",
-    skills: ["Strategy", "Agile", "Analytics"],
-  },
-  {
-    id: 7,
-    name: "Lisa Wang",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    role: "Frontend Dev",
-    skills: ["React", "TypeScript", "Tailwind"],
-  },
-  {
-    id: 8,
-    name: "James Miller",
-    avatar: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face",
-    role: "DevOps Engineer",
-    skills: ["Kubernetes", "CI/CD", "AWS"],
-  },
-  {
-    id: 10,
-    name: "Alex Thompson",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-    role: "AI Researcher",
-    skills: ["PyTorch", "Python", "ML"],
-  },
-  {
-    id: 12,
-    name: "Maria Santos",
-    avatar: "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=150&h=150&fit=crop&crop=face",
-    role: "Data Engineer",
-    skills: ["Spark", "Python", "SQL"],
-  },
-]
-
-const teams = [
-  {
-    id: 1,
-    name: "Code Crusaders",
-    members: 4,
-    maxMembers: 4,
-    skills: ["React", "Python", "ML", "TensorFlow"],
-    looking: false,
-    case: "AI & Data Intelligence",
-    description: "NLP-powered fraud detection. Let's catch the bad guys.",
-  },
-  {
-    id: 2,
-    name: "Green Hackers",
-    members: 3,
-    maxMembers: 4,
-    skills: ["IoT", "Node.js", "PostgreSQL"],
-    looking: true,
-    case: "Insight Platform",
-    description: "Real-time energy dashboards for smart buildings.",
-  },
-  {
-    id: 3,
-    name: "Security Squad",
-    members: 4,
-    maxMembers: 4,
-    skills: ["Security", "Blockchain", "Go", "AWS"],
-    looking: false,
-    case: "AI & Data Intelligence",
-    description: "Enterprise-grade anomaly detection at scale.",
-  },
-  {
-    id: 4,
-    name: "Innovation Lab",
-    members: 2,
-    maxMembers: 4,
-    skills: ["Figma", "React", "TypeScript"],
-    looking: true,
-    case: "Business Innovation",
-    description: "Disrupting fintech. Need bold thinkers!",
-  },
-  {
-    id: 5,
-    name: "Data Wizards",
-    members: 3,
-    maxMembers: 4,
-    skills: ["Python", "Pandas", "Scikit-learn"],
-    looking: true,
-    case: "AI & Data Intelligence",
-    description: "Predictive analytics for risk assessment.",
-  },
-  {
-    id: 6,
-    name: "UX Pirates",
-    members: 3,
-    maxMembers: 4,
-    skills: ["Figma", "React", "Tailwind", "Framer"],
-    looking: true,
-    case: "Insight Platform",
-    description: "Beautiful interfaces that users actually love.",
-  },
-  {
-    id: 7,
-    name: "Pitch Perfect",
-    members: 2,
-    maxMembers: 4,
-    skills: ["Strategy", "PowerPoint", "Excel"],
-    looking: true,
-    case: "Business Innovation",
-    description: "McKinsey-level decks. Killer pitches.",
-  },
-  {
-    id: 8,
-    name: "Neural Network",
-    members: 3,
-    maxMembers: 4,
-    skills: ["PyTorch", "Python", "CUDA"],
-    looking: true,
-    case: "AI & Data Intelligence",
-    description: "Deep learning research meets real-world impact.",
-  },
-]
+import { subscribeToParticipants, type Participant } from "@/lib/participants"
+import { subscribeToTeams, type TeamRecord } from "@/lib/teams"
 
 type FilterType = "all" | "ai-data" | "insight" | "business"
 
 interface InvitedMember {
-  id: number
+  id: string
   name: string
   avatar: string
   role: string
@@ -151,6 +17,9 @@ interface InvitedMember {
 export function Teams() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const [teams, setTeams] = useState<TeamRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   
   // Create Team Modal State
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -160,6 +29,47 @@ export function Teams() {
   const [invitedMembers, setInvitedMembers] = useState<InvitedMember[]>([])
   const [memberSearchQuery, setMemberSearchQuery] = useState("")
   const [showMemberResults, setShowMemberResults] = useState(false)
+
+  useEffect(() => {
+    let isParticipantsLoaded = false
+    let isTeamsLoaded = false
+
+    const setLoadingState = () => {
+      setIsLoading(!(isParticipantsLoaded && isTeamsLoaded))
+    }
+
+    const unsubscribeParticipants = subscribeToParticipants(
+      (loadedParticipants) => {
+        setParticipants(loadedParticipants)
+        isParticipantsLoaded = true
+        setLoadingState()
+      },
+      () => {
+        isParticipantsLoaded = true
+        setLoadingState()
+      },
+    )
+
+    const unsubscribeTeams = subscribeToTeams(
+      (loadedTeams) => {
+        setTeams(loadedTeams)
+        isTeamsLoaded = true
+        setLoadingState()
+      },
+      () => {
+        isTeamsLoaded = true
+        setLoadingState()
+      },
+    )
+
+    return () => {
+      unsubscribeParticipants()
+      unsubscribeTeams()
+    }
+  }, [])
+
+  const teamMemberIds = new Set(teams.flatMap((team) => team.memberIds))
+  const availableParticipants = participants.filter((participant) => !teamMemberIds.has(participant.id))
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -205,7 +115,7 @@ export function Teams() {
     setShowMemberResults(false)
   }
 
-  const removeInvite = (id: number) => {
+  const removeInvite = (id: string) => {
     setInvitedMembers(invitedMembers.filter(m => m.id !== id))
   }
 
@@ -314,7 +224,7 @@ export function Teams() {
 
       {/* Results Count */}
       <p className="text-xs text-muted-foreground mb-4">
-        {filteredTeams.length} {filteredTeams.length === 1 ? 'team' : 'teams'} found
+        {isLoading ? "Loading teams..." : `${filteredTeams.length} ${filteredTeams.length === 1 ? "team" : "teams"} found`}
       </p>
 
       {/* Teams List */}
@@ -365,7 +275,7 @@ export function Teams() {
               <div className="flex flex-col items-end justify-between shrink-0 self-stretch">
                 <div className="text-right">
                   <p className="text-xs text-white mb-1">
-                    {team.members}/{team.maxMembers} members
+                    {team.memberIds.length}/{team.maxMembers} members
                   </p>
                   {team.case && (
                     <p className="text-sm font-medium text-brand-cyan">

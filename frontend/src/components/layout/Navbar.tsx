@@ -17,8 +17,8 @@ export function Navbar() {
   const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate("/login")
   }
 
@@ -73,7 +73,9 @@ export function Navbar() {
               <span className="text-sm font-medium">{user?.name?.split(" ")[0] || "Profile"}</span>
             </Link>
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                void handleLogout()
+              }}
               className="p-2 rounded-md text-text-secondary hover:text-red-400 hover:bg-red-400/10 transition-all cursor-pointer"
               title="Logout"
             >
@@ -137,7 +139,7 @@ export function Navbar() {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false)
-                    handleLogout()
+                    void handleLogout()
                   }}
                   className="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all w-full cursor-pointer"
                 >

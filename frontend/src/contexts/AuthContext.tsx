@@ -1,14 +1,23 @@
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User as FirebaseUser,
+} from "firebase/auth"
+import { firebaseAuth, resetFirestoreLocalCache } from "@/lib/firebase"
 
 interface AuthContextType {
   isAuthenticated: boolean
   user: User | null
+  isLoading: boolean
   login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 interface User {
   id: string
+  uid: string
   name: string
   email: string
   avatar: string
@@ -16,42 +25,56 @@ interface User {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+const mapFirebaseUser = (firebaseUser: FirebaseUser): User => ({
+  id: firebaseUser.uid,
+  uid: firebaseUser.uid,
+  name: firebaseUser.displayName || firebaseUser.email || "User",
+  email: firebaseUser.email || "",
+  avatar:
+    firebaseUser.photoURL ||
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
+})
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem("isAuthenticated") === "true"
-  })
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("user")
-    return stored ? JSON.parse(stored) : null
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(mapFirebaseUser(firebaseUser))
+        setIsAuthenticated(true)
+      } else {
+        setUser(null)
+        setIsAuthenticated(false)
+      }
+
+      setIsLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock authentication - in production, this would call an API
-    if (email && password) {
-      const mockUser: User = {
-        id: "current-user",
-        name: "Sarah Chen",
-        email: email,
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face"
-      }
-      setUser(mockUser)
-      setIsAuthenticated(true)
-      localStorage.setItem("isAuthenticated", "true")
-      localStorage.setItem("user", JSON.stringify(mockUser))
+    try {
+      await signInWithEmailAndPassword(firebaseAuth, email, password)
       return true
+    } catch {
+      return false
     }
-    return false
   }
 
-  const logout = () => {
-    setUser(null)
-    setIsAuthenticated(false)
-    localStorage.removeItem("isAuthenticated")
-    localStorage.removeItem("user")
+  const logout = async () => {
+    try {
+      await signOut(firebaseAuth)
+    } finally {
+      await resetFirestoreLocalCache()
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

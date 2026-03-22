@@ -1,136 +1,58 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Search, Building2, GraduationCap } from "lucide-react"
 import { Button, Badge, Input } from "@/components/ui"
-
-const participants = [
-  {
-    id: 1,
-    name: "Sarah Chen",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-    role: "ML Engineer",
-    skills: ["Python", "TensorFlow", "NLP", "Keras", "SQL"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "company", name: "Google" },
-  },
-  {
-    id: 2,
-    name: "Marcus Johnson",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    role: "Full Stack Dev",
-    skills: ["React", "Node.js", "PostgreSQL", "TypeScript"],
-    lookingForTeam: false,
-    team: "Code Crusaders",
-    affiliation: { type: "university", name: "TU Munich" },
-  },
-  {
-    id: 3,
-    name: "Elena Rodriguez",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    role: "UX Designer",
-    skills: ["Figma", "Research", "Prototyping", "CSS", "Framer"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "company", name: "Accenture" },
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    role: "Data Scientist",
-    skills: ["Python", "Pandas", "ML", "R", "Spark"],
-    lookingForTeam: false,
-    team: "Data Wizards",
-    affiliation: { type: "university", name: "LMU Munich" },
-  },
-  {
-    id: 5,
-    name: "Aisha Patel",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-    role: "Product Manager",
-    skills: ["Strategy", "Agile", "Analytics", "SQL"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "company", name: "McKinsey" },
-  },
-  {
-    id: 6,
-    name: "Tom Wilson",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    role: "Backend Engineer",
-    skills: ["Go", "AWS", "Docker", "K8s", "Terraform"],
-    lookingForTeam: false,
-    team: "Security Squad",
-    affiliation: { type: "company", name: "Deutsche Bank" },
-  },
-  {
-    id: 7,
-    name: "Lisa Wang",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    role: "Frontend Dev",
-    skills: ["React", "TypeScript", "Tailwind", "Next.js"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "university", name: "TU Berlin" },
-  },
-  {
-    id: 8,
-    name: "James Miller",
-    avatar: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face",
-    role: "DevOps Engineer",
-    skills: ["Kubernetes", "CI/CD", "Terraform", "AWS"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "company", name: "BMW" },
-  },
-  {
-    id: 9,
-    name: "Nina Kowalski",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
-    role: "Business Analyst",
-    skills: ["Excel", "SQL", "Tableau", "PowerBI"],
-    lookingForTeam: false,
-    team: "Pitch Perfect",
-    affiliation: { type: "university", name: "WHU" },
-  },
-  {
-    id: 10,
-    name: "Alex Thompson",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-    role: "AI Researcher",
-    skills: ["PyTorch", "CUDA", "Research", "Python", "C++"],
-    lookingForTeam: false,
-    team: "Neural Network",
-    affiliation: { type: "university", name: "ETH Zürich" },
-  },
-  {
-    id: 11,
-    name: "Maya Singh",
-    avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face",
-    role: "Mobile Dev",
-    skills: ["React Native", "Swift", "Kotlin", "Flutter"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "company", name: "Siemens" },
-  },
-  {
-    id: 12,
-    name: "Chris Lee",
-    avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
-    role: "Security Engineer",
-    skills: ["Pentesting", "Blockchain", "Rust", "Go"],
-    lookingForTeam: true,
-    team: null,
-    affiliation: { type: "university", name: "KIT" },
-  },
-]
+import { subscribeToParticipants, type Participant } from "@/lib/participants"
+import { subscribeToTeams, type TeamRecord } from "@/lib/teams"
 
 type FilterType = "all" | "searching" | "in-team"
 
 export function Participants() {
   const [filter, setFilter] = useState<FilterType>("all")
   const [searchQuery, setSearchQuery] = useState("")
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const [teams, setTeams] = useState<TeamRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let isParticipantsLoaded = false
+    let isTeamsLoaded = false
+
+    const updateLoadingState = () => {
+      setIsLoading(!(isParticipantsLoaded && isTeamsLoaded))
+    }
+
+    const unsubscribeParticipants = subscribeToParticipants(
+      (loadedParticipants) => {
+        setParticipants(loadedParticipants)
+        isParticipantsLoaded = true
+        updateLoadingState()
+      },
+      () => {
+        isParticipantsLoaded = true
+        updateLoadingState()
+      },
+    )
+
+    const unsubscribeTeams = subscribeToTeams(
+      (loadedTeams) => {
+        setTeams(loadedTeams)
+        isTeamsLoaded = true
+        updateLoadingState()
+      },
+      () => {
+        isTeamsLoaded = true
+        updateLoadingState()
+      },
+    )
+
+    return () => {
+      unsubscribeParticipants()
+      unsubscribeTeams()
+    }
+  }, [])
+
+  const teamNameById = new Map(teams.map((team) => [team.id, team.name]))
 
   const filteredParticipants = participants.filter(participant => {
     const matchesFilter = filter === "all" || 
@@ -227,7 +149,7 @@ export function Participants() {
 
       {/* Results Count */}
       <p className="text-xs text-muted-foreground mb-4">
-        {filteredParticipants.length} {filteredParticipants.length === 1 ? 'participant' : 'participants'} found
+        {isLoading ? "Loading participants..." : `${filteredParticipants.length} ${filteredParticipants.length === 1 ? "participant" : "participants"} found`}
       </p>
 
       {/* Participants Grid */}
@@ -294,9 +216,9 @@ export function Participants() {
               </div>
 
               {/* Team */}
-              {participant.team && (
+              {participant.team !== null && (
                 <p className="text-[10px] text-brand-cyan/70 mt-2 truncate">
-                  {participant.team}
+                  {teamNameById.get(participant.team) ?? "Unknown Team"}
                 </p>
               )}
             </div>

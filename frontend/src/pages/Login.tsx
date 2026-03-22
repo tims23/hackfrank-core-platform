@@ -99,13 +99,7 @@ export function Login() {
 
           <div className="mt-6 pt-6 border-t border-border/50 text-center">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <button 
-                onClick={() => navigate("/register")}
-                className="text-brand-cyan hover:underline cursor-pointer"
-              >
-                Register here
-              </button>
+              Use your existing account credentials to sign in.
             </p>
           </div>
         </div>

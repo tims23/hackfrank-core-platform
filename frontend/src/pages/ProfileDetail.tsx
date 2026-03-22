@@ -1,176 +1,125 @@
+import { useEffect, useState } from "react"
 import { Link, useParams, Navigate } from "react-router-dom"
-import { Building2, GraduationCap, Users, Briefcase, ArrowLeft, UserPlus } from "lucide-react"
+import { Building2, GraduationCap, Users, Briefcase, ArrowLeft } from "lucide-react"
 import { Button, Badge } from "@/components/ui"
-
-// All participants data
-const allParticipants = [
-  {
-    id: 1,
-    name: "Sarah Chen",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-    role: "ML Engineer",
-    skills: ["Python", "TensorFlow", "NLP", "Keras", "SQL"],
-    bio: "Passionate about applying ML to real-world problems. Looking to build something impactful this hackathon!",
-    affiliation: { type: "company" as const, name: "Google" },
-    teamId: 1,
-  },
-  {
-    id: 2,
-    name: "Marcus Johnson",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    role: "Full Stack Dev",
-    skills: ["React", "Node.js", "PostgreSQL", "TypeScript"],
-    bio: "Building scalable web applications. Always learning new technologies.",
-    affiliation: { type: "university" as const, name: "TU Munich" },
-    teamId: 1,
-  },
-  {
-    id: 3,
-    name: "Elena Rodriguez",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    role: "UX Designer",
-    skills: ["Figma", "Research", "Prototyping", "CSS", "Framer"],
-    bio: "Creating intuitive user experiences. Design thinking enthusiast.",
-    affiliation: { type: "company" as const, name: "Accenture" },
-    teamId: null,
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-    role: "Data Scientist",
-    skills: ["Python", "Pandas", "ML", "R", "Spark"],
-    bio: "Turning data into actionable insights. Stats nerd and coffee addict.",
-    affiliation: { type: "university" as const, name: "LMU Munich" },
-    teamId: 1,
-  },
-  {
-    id: 5,
-    name: "Aisha Patel",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-    role: "Product Manager",
-    skills: ["Strategy", "Agile", "Analytics", "SQL"],
-    bio: "Bridging tech and business. Love solving complex problems.",
-    affiliation: { type: "company" as const, name: "McKinsey" },
-    teamId: null,
-  },
-  {
-    id: 6,
-    name: "Tom Wilson",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    role: "Backend Engineer",
-    skills: ["Go", "AWS", "Docker", "K8s", "Terraform"],
-    bio: "Cloud infrastructure specialist. Building reliable systems at scale.",
-    affiliation: { type: "company" as const, name: "Deutsche Bank" },
-    teamId: 1,
-  },
-  {
-    id: 7,
-    name: "Lisa Wang",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-    role: "Frontend Dev",
-    skills: ["React", "TypeScript", "Tailwind", "Next.js"],
-    bio: "Crafting beautiful and performant UIs. Open source contributor.",
-    affiliation: { type: "university" as const, name: "TU Berlin" },
-    teamId: null,
-  },
-  {
-    id: 8,
-    name: "James Miller",
-    avatar: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face",
-    role: "DevOps Engineer",
-    skills: ["Kubernetes", "CI/CD", "Terraform", "AWS"],
-    bio: "Automating everything. Making deployments boring (in a good way).",
-    affiliation: { type: "company" as const, name: "BMW" },
-    teamId: null,
-  },
-  {
-    id: 9,
-    name: "Nina Kowalski",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
-    role: "Business Analyst",
-    skills: ["Excel", "SQL", "Tableau", "PowerBI"],
-    bio: "Data-driven decision making. Visualizing insights that matter.",
-    affiliation: { type: "university" as const, name: "WHU" },
-    teamId: 2,
-  },
-  {
-    id: 10,
-    name: "Alex Thompson",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-    role: "AI Researcher",
-    skills: ["PyTorch", "CUDA", "Research", "Python", "C++"],
-    bio: "Pushing the boundaries of AI. PhD candidate focused on NLP.",
-    affiliation: { type: "university" as const, name: "ETH Zürich" },
-    teamId: 3,
-  },
-  {
-    id: 11,
-    name: "Maya Singh",
-    avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face",
-    role: "Mobile Dev",
-    skills: ["React Native", "Swift", "Kotlin", "Flutter"],
-    bio: "Mobile-first mindset. Building apps that users love.",
-    affiliation: { type: "company" as const, name: "Siemens" },
-    teamId: null,
-  },
-  {
-    id: 12,
-    name: "Chris Lee",
-    avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
-    role: "Security Engineer",
-    skills: ["Pentesting", "Blockchain", "Rust", "Go"],
-    bio: "Breaking things to make them stronger. Security researcher.",
-    affiliation: { type: "university" as const, name: "KIT" },
-    teamId: null,
-  },
-]
-
-// Teams data
-const allTeams = [
-  {
-    id: 1,
-    name: "Code Crusaders",
-    description: "NLP-powered fraud detection. Let's go!",
-    case: "AI & Data Intelligence",
-    skills: ["React", "Python", "ML", "TensorFlow"],
-    leaderId: 1,
-  },
-  {
-    id: 2,
-    name: "Pitch Perfect",
-    description: "Crafting the perfect investor pitch.",
-    case: "Business Innovation",
-    skills: ["Strategy", "Analytics", "Presentation"],
-    leaderId: 9,
-  },
-  {
-    id: 3,
-    name: "Neural Network",
-    description: "Deep learning for market predictions.",
-    case: "AI & Data Intelligence",
-    skills: ["PyTorch", "ML", "Research", "Python"],
-    leaderId: 10,
-  },
-]
+import { subscribeToParticipants, type Participant } from "@/lib/participants"
+import { subscribeToTeams, type TeamRecord } from "@/lib/teams"
 
 export function ProfileDetail() {
   const { userId } = useParams()
-  const numericUserId = parseInt(userId || "0", 10)
-  
-  // Find the user
-  const user = allParticipants.find(p => p.id === numericUserId)
+  const normalizedUserId = (userId ?? "").trim()
+  const [user, setUser] = useState<Participant | null>(null)
+  const [teamRecord, setTeamRecord] = useState<TeamRecord | null>(null)
+  const [teamMembers, setTeamMembers] = useState<Participant[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!normalizedUserId) {
+      setUser(null)
+      setTeamRecord(null)
+      setTeamMembers([])
+      setIsLoading(false)
+      return
+    }
+
+    let latestParticipants: Participant[] = []
+    let latestTeams: TeamRecord[] = []
+    let isParticipantsLoaded = false
+    let isTeamsLoaded = false
+
+    const updateLoadingState = () => {
+      setIsLoading(!(isParticipantsLoaded && isTeamsLoaded))
+    }
+
+    const syncProfileState = () => {
+      const loadedUser = latestParticipants.find((participant) => participant.id === normalizedUserId) ?? null
+      setUser(loadedUser)
+
+      if (!loadedUser) {
+        setTeamRecord(null)
+        setTeamMembers([])
+        updateLoadingState()
+        return
+      }
+
+      const participantTeamId =
+        typeof loadedUser.team === "number" && Number.isFinite(loadedUser.team)
+          ? loadedUser.team
+          : null
+
+      const resolvedTeam =
+        participantTeamId === null
+          ? null
+          : latestTeams.find((team) => team.id === participantTeamId) ?? null
+
+      setTeamRecord(resolvedTeam)
+
+      const loadedMembers = resolvedTeam
+        ? latestParticipants
+            .filter((participant) => resolvedTeam.memberIds.includes(participant.id))
+            .sort((firstMember, secondMember) =>
+              firstMember.id.localeCompare(secondMember.id, undefined, { numeric: true }),
+            )
+        : []
+
+      setTeamMembers(loadedMembers)
+
+      updateLoadingState()
+    }
+
+    const unsubscribeParticipants = subscribeToParticipants(
+      (participants) => {
+        latestParticipants = participants
+        isParticipantsLoaded = true
+        syncProfileState()
+      },
+      () => {
+        isParticipantsLoaded = true
+        updateLoadingState()
+      },
+    )
+
+    const unsubscribeTeams = subscribeToTeams(
+      (teams) => {
+        latestTeams = teams
+        isTeamsLoaded = true
+        syncProfileState()
+      },
+      () => {
+        isTeamsLoaded = true
+        updateLoadingState()
+      },
+    )
+
+    return () => {
+      unsubscribeParticipants()
+      unsubscribeTeams()
+    }
+  }, [normalizedUserId])
+
+  const team = teamRecord
+    ? {
+        name: teamRecord.name,
+        description: teamRecord.description,
+        case: teamRecord.case,
+        skills: teamRecord.skills,
+        leaderId: teamRecord.leaderId ?? user?.id ?? null,
+        maxMembers: teamRecord.maxMembers,
+      }
+    : null
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <p className="text-sm text-muted-foreground">Loading participant...</p>
+      </div>
+    )
+  }
   
   // Redirect if user not found
   if (!user) {
     return <Navigate to="/participants" replace />
   }
-  
-  // Find user's team and team members
-  const team = user.teamId ? allTeams.find(t => t.id === user.teamId) : null
-  const teamMembers = team 
-    ? allParticipants.filter(p => p.teamId === team.id)
-    : []
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -238,7 +187,7 @@ export function ProfileDetail() {
           
           {/* Action */}
           <div className="shrink-0">
-            {user.teamId ? (
+            {user.team ? (
               <Badge className="bg-brand-cyan/10 text-brand-cyan border-brand-cyan/20">
                 In a Team
               </Badge>
@@ -268,7 +217,7 @@ export function ProfileDetail() {
               Team
             </h2>
             <Badge className="bg-brand-cyan/10 text-brand-cyan border-brand-cyan/20">
-              {teamMembers.length}/4 members
+              {teamMembers.length}/{team.maxMembers} members
             </Badge>
           </div>
 
@@ -294,16 +243,20 @@ export function ProfileDetail() {
             {/* Team Skills */}
             <div className="mb-6">
               <p className="text-xs text-muted-foreground mb-2">Team Skills</p>
-              <div className="flex flex-wrap gap-1.5">
-                {team.skills.map((skill) => (
-                  <span 
-                    key={skill} 
-                    className="px-2 py-0.5 text-xs bg-secondary/40 text-foreground/70 rounded-md border border-border/20"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+              {team.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {team.skills.map((skill) => (
+                    <span 
+                      key={skill} 
+                      className="px-2 py-0.5 text-xs bg-secondary/40 text-foreground/70 rounded-md border border-border/20"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No team skills available yet.</p>
+              )}
             </div>
 
             {/* Divider */}

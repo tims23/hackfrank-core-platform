@@ -1,11 +1,11 @@
 import { Navigate } from "react-router-dom"
 import { useAuth } from "@/contexts"
 
-interface ProtectedRouteProps {
+interface PublicOnlyRouteProps {
   children: React.ReactNode
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
@@ -16,10 +16,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
 }
-

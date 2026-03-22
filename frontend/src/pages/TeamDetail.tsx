@@ -1,289 +1,87 @@
+import { useEffect, useState } from "react"
 import { Link, useParams, Navigate } from "react-router-dom"
 import { Building2, GraduationCap, Users, Briefcase, ArrowLeft } from "lucide-react"
 import { Button, Badge } from "@/components/ui"
-
-// All teams data with full member info
-const allTeams = [
-  {
-    id: 1,
-    name: "Code Crusaders",
-    description: "NLP-powered fraud detection. Let's go!",
-    case: "AI & Data Intelligence",
-    skills: ["React", "Python", "ML", "TensorFlow"],
-    looking: false,
-    members: [
-      {
-        id: 1,
-        name: "Sarah Chen",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        role: "ML Engineer",
-        affiliation: { type: "company" as const, name: "Google" },
-        isLeader: true,
-      },
-      {
-        id: 2,
-        name: "Marcus Johnson",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-        role: "Full Stack Dev",
-        affiliation: { type: "university" as const, name: "TU Munich" },
-        isLeader: false,
-      },
-      {
-        id: 4,
-        name: "David Kim",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        role: "Data Scientist",
-        affiliation: { type: "university" as const, name: "LMU Munich" },
-        isLeader: false,
-      },
-      {
-        id: 6,
-        name: "Tom Wilson",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-        role: "Backend Engineer",
-        affiliation: { type: "company" as const, name: "Deutsche Bank" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Green Hackers",
-    description: "Real-time energy dashboards for smart buildings.",
-    case: "Insight Platform",
-    skills: ["IoT", "Node.js", "PostgreSQL"],
-    looking: true,
-    members: [
-      {
-        id: 7,
-        name: "Lisa Wang",
-        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-        role: "Frontend Dev",
-        affiliation: { type: "university" as const, name: "TU Berlin" },
-        isLeader: true,
-      },
-      {
-        id: 8,
-        name: "James Miller",
-        avatar: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face",
-        role: "DevOps Engineer",
-        affiliation: { type: "company" as const, name: "BMW" },
-        isLeader: false,
-      },
-      {
-        id: 11,
-        name: "Maya Singh",
-        avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face",
-        role: "Mobile Dev",
-        affiliation: { type: "company" as const, name: "Siemens" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Security Squad",
-    description: "Enterprise-grade anomaly detection at scale.",
-    case: "AI & Data Intelligence",
-    skills: ["Security", "Blockchain", "Go", "AWS"],
-    looking: false,
-    members: [
-      {
-        id: 12,
-        name: "Chris Lee",
-        avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
-        role: "Security Engineer",
-        affiliation: { type: "university" as const, name: "KIT" },
-        isLeader: true,
-      },
-      {
-        id: 6,
-        name: "Tom Wilson",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-        role: "Backend Engineer",
-        affiliation: { type: "company" as const, name: "Deutsche Bank" },
-        isLeader: false,
-      },
-      {
-        id: 10,
-        name: "Alex Thompson",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-        role: "AI Researcher",
-        affiliation: { type: "university" as const, name: "ETH Zürich" },
-        isLeader: false,
-      },
-      {
-        id: 8,
-        name: "James Miller",
-        avatar: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=150&h=150&fit=crop&crop=face",
-        role: "DevOps Engineer",
-        affiliation: { type: "company" as const, name: "BMW" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Innovation Lab",
-    description: "Disrupting fintech. Need bold thinkers!",
-    case: "Business Innovation",
-    skills: ["Figma", "React", "TypeScript"],
-    looking: true,
-    members: [
-      {
-        id: 3,
-        name: "Elena Rodriguez",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        role: "UX Designer",
-        affiliation: { type: "company" as const, name: "Accenture" },
-        isLeader: true,
-      },
-      {
-        id: 5,
-        name: "Aisha Patel",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-        role: "Product Manager",
-        affiliation: { type: "company" as const, name: "McKinsey" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: "Data Wizards",
-    description: "Predictive analytics for risk assessment.",
-    case: "AI & Data Intelligence",
-    skills: ["Python", "Pandas", "Scikit-learn"],
-    looking: true,
-    members: [
-      {
-        id: 4,
-        name: "David Kim",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        role: "Data Scientist",
-        affiliation: { type: "university" as const, name: "LMU Munich" },
-        isLeader: true,
-      },
-      {
-        id: 9,
-        name: "Nina Kowalski",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
-        role: "Business Analyst",
-        affiliation: { type: "university" as const, name: "WHU" },
-        isLeader: false,
-      },
-      {
-        id: 10,
-        name: "Alex Thompson",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-        role: "AI Researcher",
-        affiliation: { type: "university" as const, name: "ETH Zürich" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 6,
-    name: "UX Pirates",
-    description: "Beautiful interfaces that users actually love.",
-    case: "Insight Platform",
-    skills: ["Figma", "React", "Tailwind", "Framer"],
-    looking: true,
-    members: [
-      {
-        id: 3,
-        name: "Elena Rodriguez",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-        role: "UX Designer",
-        affiliation: { type: "company" as const, name: "Accenture" },
-        isLeader: true,
-      },
-      {
-        id: 7,
-        name: "Lisa Wang",
-        avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-        role: "Frontend Dev",
-        affiliation: { type: "university" as const, name: "TU Berlin" },
-        isLeader: false,
-      },
-      {
-        id: 11,
-        name: "Maya Singh",
-        avatar: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face",
-        role: "Mobile Dev",
-        affiliation: { type: "company" as const, name: "Siemens" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 7,
-    name: "Pitch Perfect",
-    description: "McKinsey-level decks. Killer pitches.",
-    case: "Business Innovation",
-    skills: ["Strategy", "PowerPoint", "Excel"],
-    looking: true,
-    members: [
-      {
-        id: 5,
-        name: "Aisha Patel",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
-        role: "Product Manager",
-        affiliation: { type: "company" as const, name: "McKinsey" },
-        isLeader: true,
-      },
-      {
-        id: 9,
-        name: "Nina Kowalski",
-        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
-        role: "Business Analyst",
-        affiliation: { type: "university" as const, name: "WHU" },
-        isLeader: false,
-      },
-    ],
-  },
-  {
-    id: 8,
-    name: "Neural Network",
-    description: "Deep learning research meets real-world impact.",
-    case: "AI & Data Intelligence",
-    skills: ["PyTorch", "Python", "CUDA"],
-    looking: true,
-    members: [
-      {
-        id: 10,
-        name: "Alex Thompson",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-        role: "AI Researcher",
-        affiliation: { type: "university" as const, name: "ETH Zürich" },
-        isLeader: true,
-      },
-      {
-        id: 1,
-        name: "Sarah Chen",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
-        role: "ML Engineer",
-        affiliation: { type: "company" as const, name: "Google" },
-        isLeader: false,
-      },
-      {
-        id: 4,
-        name: "David Kim",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
-        role: "Data Scientist",
-        affiliation: { type: "university" as const, name: "LMU Munich" },
-        isLeader: false,
-      },
-    ],
-  },
-]
+import { subscribeToParticipants, type Participant } from "@/lib/participants"
+import { subscribeToTeams, type TeamRecord } from "@/lib/teams"
 
 export function TeamDetail() {
   const { teamId } = useParams()
-  const numericTeamId = parseInt(teamId || "0", 10)
-  
-  // Find the team
-  const team = allTeams.find(t => t.id === numericTeamId)
+  const normalizedTeamId = (teamId ?? "").trim()
+  const [team, setTeam] = useState<TeamRecord | null>(null)
+  const [members, setMembers] = useState<Participant[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const parsedTeamId = Number(normalizedTeamId)
+
+    if (!Number.isFinite(parsedTeamId) || parsedTeamId <= 0) {
+      setTeam(null)
+      setMembers([])
+      setIsLoading(false)
+      return
+    }
+
+    let currentTeamMemberIds: string[] | null = null
+    let latestParticipants: Participant[] = []
+
+    const updateMembers = (allParticipants: Participant[]) => {
+      latestParticipants = allParticipants
+
+      const teamMemberIds = currentTeamMemberIds
+
+      const loadedMembers = teamMemberIds
+        ? allParticipants
+            .filter((participant) => teamMemberIds.includes(participant.id))
+            .sort((firstMember, secondMember) =>
+              firstMember.id.localeCompare(secondMember.id, undefined, { numeric: true }),
+            )
+        : []
+
+      setMembers(loadedMembers)
+    }
+
+    let unsubscribeParticipants: (() => void) | undefined
+
+    const unsubscribeTeams = subscribeToTeams(
+      (allTeams) => {
+        const loadedTeam = allTeams.find((currentTeam) => currentTeam.id === parsedTeamId) ?? null
+        setTeam(loadedTeam)
+        currentTeamMemberIds = loadedTeam?.memberIds ?? null
+
+        updateMembers(latestParticipants)
+
+        setIsLoading(false)
+      },
+      () => {
+        setIsLoading(false)
+      },
+    )
+
+    unsubscribeParticipants = subscribeToParticipants(
+      (allParticipants) => {
+        updateMembers(allParticipants)
+      },
+      () => {
+        setIsLoading(false)
+      },
+    )
+
+    return () => {
+      unsubscribeTeams()
+      if (unsubscribeParticipants) {
+        unsubscribeParticipants()
+      }
+    }
+  }, [normalizedTeamId])
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <p className="text-sm text-muted-foreground">Loading team...</p>
+      </div>
+    )
+  }
   
   // Redirect if team not found
   if (!team) {
@@ -321,7 +119,7 @@ export function TeamDetail() {
                 </Badge>
               )}
               <Badge className="bg-secondary/40 text-foreground/70 border-border/20">
-                {team.members.length}/4 members
+                {members.length}/{team.maxMembers} members
               </Badge>
             </div>
           </div>
@@ -374,7 +172,7 @@ export function TeamDetail() {
         <div>
           <p className="text-xs text-muted-foreground mb-4">Team Members</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {team.members.map((member) => (
+            {members.map((member) => (
               <Link 
                 key={member.id} 
                 to={`/profile/${member.id}`}
@@ -386,7 +184,7 @@ export function TeamDetail() {
                     alt={member.name}
                     className="w-16 h-16 rounded-full object-cover mx-auto transition-transform duration-200 group-hover:scale-105"
                   />
-                  {member.isLeader && (
+                  {member.id === team.leaderId && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
                       <Badge className="bg-brand-cyan text-background border-0 text-[10px] px-1.5 font-medium">
                         Leader
