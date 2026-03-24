@@ -2,7 +2,19 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { Layout } from "@/components/layout"
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/auth"
 import { AuthProvider } from "@/contexts"
-import { Dashboard, Teams, TeamDetail, Participants, Cases, CaseDetail, Profile, ProfileDetail, Login } from "@/pages"
+import {
+  Dashboard,
+  Teams,
+  TeamDetail,
+  Participants,
+  Cases,
+  CaseDetail,
+  Profile,
+  ProfileDetail,
+  Login,
+  Application,
+  ApplicationForm,
+} from "@/pages"
 
 function App() {
   return (
@@ -18,7 +30,23 @@ function App() {
               </PublicOnlyRoute>
             }
           />
-          <Route path="/register" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/application"
+            element={
+              <PublicOnlyRoute redirectTo="/application/form">
+                <Application />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route path="/register" element={<Navigate to="/application" replace />} />
+          <Route
+            path="/application/form"
+            element={
+              <ProtectedRoute requireParticipant={false}>
+                <ApplicationForm />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Protected Routes */}
           <Route path="/" element={

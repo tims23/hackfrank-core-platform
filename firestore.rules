@@ -2,6 +2,103 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnApplicant(applicantId) {
+      return isSignedIn() && request.auth.uid == applicantId;
+    }
+
+    function isValidPendingTeamCreate() {
+      return isSignedIn()
+        && request.resource.data.leaderId == request.auth.uid
+        && request.resource.data.status == "APPLICATION_PENDING"
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.case is string
+        && request.resource.data.case.size() == 0
+        && request.resource.data.maxMembers is int
+        && request.resource.data.maxMembers >= 2
+        && request.resource.data.maxMembers <= 4
+        && request.resource.data.memberIds is list
+        && request.resource.data.memberIds.size() == 1
+        && request.resource.data.memberIds[0] == request.auth.uid
+        && request.resource.data.skills is list
+        && request.resource.data.looking is bool
+        && request.resource.data.id is int
+        && request.resource.data.teamCode is string
+        && request.resource.data.teamCode.size() >= 4
+        && request.resource.data.pendingMemberIds is list
+        && request.resource.data.pendingMemberIds.size() == 0;
+    }
+
+    function hasUnchangedPendingTeamCoreFields() {
+      return isSignedIn()
+        && resource.data.status == "APPLICATION_PENDING"
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.leaderId == resource.data.leaderId
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.case == resource.data.case
+        && request.resource.data.maxMembers == resource.data.maxMembers
+        && request.resource.data.skills == resource.data.skills
+        && request.resource.data.teamCode == resource.data.teamCode
+        && request.resource.data.looking == resource.data.looking
+        && request.resource.data.memberIds is list
+        && request.resource.data.pendingMemberIds is list;
+    }
+
+    function canSelfAddPendingMember() {
+      return hasUnchangedPendingTeamCoreFields()
+        && request.resource.data.memberIds == resource.data.memberIds
+        && request.resource.data.pendingMemberIds is list
+        && request.resource.data.pendingMemberIds.hasAll(
+          resource.data.pendingMemberIds is list ? resource.data.pendingMemberIds : []
+        )
+        && request.resource.data.pendingMemberIds.hasAll([request.auth.uid])
+        && request.resource.data.pendingMemberIds.size()
+          == (
+            (resource.data.pendingMemberIds is list ? resource.data.pendingMemberIds.size() : 0)
+            + (
+              resource.data.pendingMemberIds is list
+                && resource.data.pendingMemberIds.hasAny([request.auth.uid])
+              ? 0
+              : 1
+            )
+          );
+    }
+
+    function canLeaderManagePendingMembers() {
+      return hasUnchangedPendingTeamCoreFields()
+        && resource.data.leaderId == request.auth.uid
+        && request.resource.data.memberIds is list
+        && request.resource.data.pendingMemberIds is list
+        && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+        && (
+          resource.data.pendingMemberIds is list
+            ? resource.data.pendingMemberIds.hasAll(request.resource.data.pendingMemberIds)
+            : request.resource.data.pendingMemberIds.size() == 0
+        )
+        && request.resource.data.memberIds.size() >= resource.data.memberIds.size()
+        && request.resource.data.memberIds.size() <= resource.data.memberIds.size() + 1
+        && request.resource.data.pendingMemberIds.size()
+          <= (resource.data.pendingMemberIds is list ? resource.data.pendingMemberIds.size() : 0)
+        && request.resource.data.pendingMemberIds.size()
+          >= (resource.data.pendingMemberIds is list ? resource.data.pendingMemberIds.size() : 0) - 1
+        && (
+          request.resource.data.memberIds.size() - resource.data.memberIds.size()
+            <= (resource.data.pendingMemberIds is list ? resource.data.pendingMemberIds.size() : 0)
+              - request.resource.data.pendingMemberIds.size()
+        );
+    }
+
+    function isValidPendingTeamJoinUpdate() {
+      return canSelfAddPendingMember() || canLeaderManagePendingMembers();
+    }
+
     match /participants/{participantId} {
       allow read: if true;
       allow write: if false;
@@ -9,7 +106,16 @@ service cloud.firestore {
 
     match /teams/{teamId} {
       allow read: if true;
-      allow write: if false;
+      allow create: if isValidPendingTeamCreate();
+      allow update: if isValidPendingTeamJoinUpdate();
+      allow delete: if false;
+    }
+
+    match /applicants/{applicantId} {
+      allow read: if isOwnApplicant(applicantId);
+      allow create: if isOwnApplicant(applicantId) && request.resource.data.uid == request.auth.uid;
+      allow update: if isOwnApplicant(applicantId) && request.resource.data.uid == request.auth.uid;
+      allow delete: if isOwnApplicant(applicantId);
     }
 
     match /{document=**} {

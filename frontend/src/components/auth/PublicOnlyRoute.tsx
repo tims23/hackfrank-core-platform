@@ -3,9 +3,10 @@ import { useAuth } from "@/contexts"
 
 interface PublicOnlyRouteProps {
   children: React.ReactNode
+  redirectTo?: string
 }
 
-export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
+export function PublicOnlyRoute({ children, redirectTo = "/" }: PublicOnlyRouteProps) {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
@@ -17,7 +18,7 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />
+    return <Navigate to={redirectTo} replace />
   }
 
   return <>{children}</>

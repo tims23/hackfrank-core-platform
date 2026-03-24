@@ -99,7 +99,13 @@ export function Login() {
 
           <div className="mt-6 pt-6 border-t border-border/50 text-center">
             <p className="text-sm text-muted-foreground">
-              Use your existing account credentials to sign in.
+              Want to join the hackathon?{" "}
+              <button
+                onClick={() => navigate("/application")}
+                className="text-brand-cyan hover:underline cursor-pointer"
+              >
+                Start application
+              </button>
             </p>
           </div>
         </div>

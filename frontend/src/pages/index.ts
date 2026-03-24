@@ -7,5 +7,6 @@ export { CaseDetail } from "./CaseDetail"
 export { Profile } from "./Profile"
 export { ProfileDetail } from "./ProfileDetail"
 export { Login } from "./Login"
-export { Register } from "./Register"
+export { Application } from "./Register"
+export { ApplicationForm } from "./ApplicationForm"
 

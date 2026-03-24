@@ -28,7 +28,7 @@ const cases = [
 ]
 
 const timelineSteps = [
-  { id: 1, title: "Register", description: "Sign up & create profile" },
+  { id: 1, title: "Apply", description: "Submit your application" },
   { id: 2, title: "Find Team", description: "Join or create a team" },
   { id: 3, title: "Kick-off", description: "Attend opening ceremony" },
   { id: 4, title: "Hack", description: "48 hours of building" },
@@ -182,7 +182,7 @@ export function Dashboard() {
             {/* Timeline Section */}
             <div className="max-w-5xl mx-auto mt-12 animate-slide-up stagger-4">
               <h2 className="text-xl font-semibold text-foreground mb-2">Start Hack Timeline</h2>
-              <p className="text-sm text-muted-foreground mb-8">From registration to final pitch — here's your journey through the hackathon.</p>
+              <p className="text-sm text-muted-foreground mb-8">From application to final pitch — here's your journey through the hackathon.</p>
               
               {/* Timeline Steps */}
               <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-0">

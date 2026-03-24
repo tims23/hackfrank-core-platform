@@ -99,3 +99,45 @@ export const subscribeToParticipants = (
     },
   )
 }
+
+export const subscribeToParticipantAccess = (
+  uid: string,
+  onAccessUpdate: (hasParticipantAccess: boolean) => void,
+  onError?: (error: Error) => void,
+) => {
+  logFirebaseFetch("onSnapshot:subscribe", {
+    collection: "participants",
+    targetUid: uid,
+  })
+
+  return onSnapshot(
+    collection(firestoreDb, "participants"),
+    (snapshot) => {
+      const hasParticipantAccess = snapshot.docs.some((participantDoc) => {
+        const data = participantDoc.data() as { id?: unknown }
+        return parseParticipantId(participantDoc.id, data.id) === uid
+      })
+
+      logFirebaseFetch("onSnapshot:update", {
+        collection: "participants",
+        targetUid: uid,
+        size: snapshot.size,
+        hasParticipantAccess,
+        fromCache: snapshot.metadata.fromCache,
+      })
+
+      onAccessUpdate(hasParticipantAccess)
+    },
+    (snapshotError) => {
+      logFirebaseFetch("onSnapshot:error", {
+        collection: "participants",
+        targetUid: uid,
+        message: snapshotError.message,
+      })
+
+      if (onError) {
+        onError(snapshotError)
+      }
+    },
+  )
+}

@@ -4,24 +4,19 @@ import { Button, Input } from "@/components/ui"
 import { useAuth } from "@/contexts"
 import { Sparkles } from "lucide-react"
 
-export function Register() {
-  const [name, setName] = useState("")
+export function Application() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const { apply } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
-    if (!name.trim()) {
-      setError("Please enter your name")
-      return
-    }
     if (!email.trim()) {
       setError("Please enter your email")
       return
@@ -40,14 +35,13 @@ export function Register() {
     }
 
     setIsLoading(true)
-    // Mock registration - in production, this would call an API
-    const success = await login(email, password)
+    const success = await apply(email.trim(), password)
     setIsLoading(false)
 
     if (success) {
-      navigate("/")
+      navigate("/application/form")
     } else {
-      setError("Registration failed")
+      setError("Application failed. Please check your details and try again.")
     }
   }
 
@@ -65,28 +59,14 @@ export function Register() {
           </div>
         </div>
 
-        {/* Register Card */}
+        {/* Application Card */}
         <div className="glass-card rounded-xl p-8 animate-slide-up stagger-1">
-          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Create Account</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Start Application</h2>
           <p className="text-sm text-muted-foreground mb-6 text-center">
-            Join the hackathon and start building
+            Create your account to continue to the application form.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Name
-              </label>
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your full name"
-                className="w-full"
-                maxLength={50}
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
                 Email
@@ -135,7 +115,7 @@ export function Register() {
               className="w-full" 
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? "Starting application..." : "Start Application"}
             </Button>
           </form>
 
