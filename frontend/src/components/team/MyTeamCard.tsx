@@ -7,13 +7,23 @@ type MyTeamCardProps = {
   caseLabel?: string
   maxMembers: number
   memberCount: number
+  memberIds?: string[]
+  memberNames?: string[]
+  memberStatuses?: string[]
+  leaderId?: string
+  currentUserId?: string
   status?: string
   teamCode?: string
   showPendingMembers?: boolean
   pendingMemberIds?: string[]
+  pendingMemberNames?: string[]
+  onKickTeamMember?: (memberId: string) => void | Promise<void>
+  isUpdatingTeamMembers?: boolean
   onApprovePendingMember?: (memberId: string) => void | Promise<void>
   onDeclinePendingMember?: (memberId: string) => void | Promise<void>
   isUpdatingPendingMembers?: boolean
+  onLeaveTeam?: () => void | Promise<void>
+  isLeavingTeam?: boolean
 }
 
 export function MyTeamCard({
@@ -22,13 +32,23 @@ export function MyTeamCard({
   caseLabel,
   maxMembers,
   memberCount,
+  memberIds = [],
+  memberNames = [],
+  memberStatuses = [],
+  leaderId,
+  currentUserId,
   status,
   teamCode,
   showPendingMembers = false,
   pendingMemberIds = [],
+  pendingMemberNames = [],
+  onKickTeamMember,
+  isUpdatingTeamMembers = false,
   onApprovePendingMember,
   onDeclinePendingMember,
   isUpdatingPendingMembers = false,
+  onLeaveTeam,
+  isLeavingTeam = false,
 }: MyTeamCardProps) {
   return (
     <div className="space-y-4">
@@ -39,7 +59,20 @@ export function MyTeamCard({
         </Badge>
       </div>
 
-      <div className="glass-card rounded-xl p-6">
+      <div className="glass-card rounded-xl p-6 relative">
+        {onLeaveTeam && (
+          <div className="absolute top-4 right-4">
+            <button
+              type="button"
+              disabled={isLeavingTeam}
+              onClick={() => onLeaveTeam()}
+              className="px-3 py-1.5 text-xs rounded border border-red-400/40 text-red-300 hover:text-red-200 hover:border-red-300/60 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLeavingTeam ? "Leaving..." : "Leave Team"}
+            </button>
+          </div>
+        )}
+
         <div className="mb-4">
           <h4 className="text-xl font-semibold text-foreground mb-2">{teamName}</h4>
           <p className="text-sm text-muted-foreground mb-3">{description}</p>
@@ -75,6 +108,59 @@ export function MyTeamCard({
               {memberCount > 0 ? " (including you)" : ""}
             </span>
           </div>
+
+          {memberNames.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {memberNames.map((memberName, index) => {
+                const memberId = memberIds[index]
+                const memberStatus = memberStatuses[index] ?? "unknown"
+                const isLeaderRow = !!leaderId && memberId === leaderId
+                const canKick =
+                  !!onKickTeamMember &&
+                  !!leaderId &&
+                  !!currentUserId &&
+                  leaderId === currentUserId &&
+                  !!memberId &&
+                  memberId !== leaderId
+
+                return (
+                  <div
+                    key={`${memberName}-${index}`}
+                    className="flex items-center justify-between gap-2 rounded-md border border-border/30 px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm text-foreground truncate">{memberName}</span>
+                      <Badge
+                        className={
+                          memberStatus === "submitted"
+                            ? "bg-green-500/10 text-green-400 border-green-500/30"
+                            : memberStatus === "started"
+                              ? "bg-secondary/40 text-foreground/70 border-border/30"
+                              : "bg-secondary/30 text-muted-foreground border-border/20"
+                        }
+                      >
+                        {memberStatus}
+                      </Badge>
+                      {isLeaderRow && (
+                        <Badge className="bg-brand-cyan/10 text-brand-cyan border-brand-cyan/20">Leader</Badge>
+                      )}
+                    </div>
+
+                    {canKick && (
+                      <button
+                        type="button"
+                        disabled={isUpdatingTeamMembers}
+                        onClick={() => onKickTeamMember?.(memberId)}
+                        className="px-3 py-1 text-xs rounded border border-red-400/40 text-red-300 hover:text-red-200 hover:border-red-300/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Kick
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {showPendingMembers && (
@@ -85,12 +171,14 @@ export function MyTeamCard({
               <p className="text-sm text-muted-foreground">No pending members right now.</p>
             ) : (
               <div className="space-y-2">
-                {pendingMemberIds.map((memberId) => (
+                {pendingMemberIds.map((memberId, index) => (
                   <div
                     key={memberId}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-md border border-border/30 px-3 py-2"
                   >
-                    <span className="text-sm text-foreground break-all">{memberId}</span>
+                    <span className="text-sm text-foreground break-all">
+                      {pendingMemberNames[index] ?? memberId}
+                    </span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -115,6 +203,7 @@ export function MyTeamCard({
             )}
           </div>
         )}
+
       </div>
     </div>
   )

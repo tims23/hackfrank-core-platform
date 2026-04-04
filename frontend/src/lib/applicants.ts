@@ -1,4 +1,4 @@
-import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore"
+import { collection, doc, documentId, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 
 export type ApplicantStatus = "started" | "submitted"
@@ -45,6 +45,11 @@ export type ApplicantFormInput = {
   newTeamMaxMembers: string
 }
 
+export type ApplicantProfileLookupResult = {
+  namesById: Record<string, string>
+  statusesById: Record<string, ApplicantStatus>
+}
+
 const readApplicantString = (value: unknown): string => (typeof value === "string" ? value : "")
 const readApplicantStringArray = (value: unknown): string[] =>
   Array.isArray(value)
@@ -56,10 +61,84 @@ const readApplicantStringArray = (value: unknown): string[] =>
 const readApplicantNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null
 
+const chunkIds = (ids: string[], chunkSize: number): string[][] => {
+  const chunks: string[][] = []
+
+  for (let index = 0; index < ids.length; index += chunkSize) {
+    chunks.push(ids.slice(index, index + chunkSize))
+  }
+
+  return chunks
+}
+
+export const fetchApplicantProfilesByIds = async (
+  applicantIds: string[],
+): Promise<ApplicantProfileLookupResult> => {
+  const normalizedIds = [...new Set(applicantIds.map((id) => id.trim()).filter((id) => id.length > 0))]
+
+  if (normalizedIds.length === 0) {
+    return {
+      namesById: {},
+      statusesById: {},
+    }
+  }
+
+  const idChunks = chunkIds(normalizedIds, 30)
+  const namesById: Record<string, string> = {}
+  const statusesById: Record<string, ApplicantStatus> = {}
+
+  for (const idsChunk of idChunks) {
+    logFirebaseFetch("getDocs:start", {
+      collection: "applicants",
+      idCount: idsChunk.length,
+      mode: "member-name-lookup",
+    })
+
+    const applicantQuery = query(
+      collection(firestoreDb, "applicants"),
+      where(documentId(), "in", idsChunk),
+    )
+
+    const applicantsSnapshot = await getDocs(applicantQuery)
+
+    logFirebaseFetch("getDocs:success", {
+      collection: "applicants",
+      idCount: idsChunk.length,
+      size: applicantsSnapshot.size,
+      mode: "member-name-lookup",
+    })
+
+    applicantsSnapshot.forEach((applicantDoc) => {
+      const data = applicantDoc.data() as Partial<ApplicantRecord>
+      const prename = readApplicantString(data.prename).trim()
+      const surname = readApplicantString(data.surname).trim()
+      const fullName = `${prename} ${surname}`.trim()
+      const applicantStatus: ApplicantStatus = data.status === "submitted" ? "submitted" : "started"
+
+      if (fullName.length > 0) {
+        namesById[applicantDoc.id] = fullName
+      }
+
+      statusesById[applicantDoc.id] = applicantStatus
+    })
+  }
+
+  return {
+    namesById,
+    statusesById,
+  }
+}
+
+export const fetchApplicantNamesByIds = async (applicantIds: string[]): Promise<Record<string, string>> => {
+  const { namesById } = await fetchApplicantProfilesByIds(applicantIds)
+  return namesById
+}
+
 export const subscribeToApplicantFormData = (
   uid: string,
   onApplicantFormData: (applicantFormData: Partial<ApplicantFormInput>) => void,
   onError?: (error: Error) => void,
+  onStatusUpdate?: (status: ApplicantStatus) => void,
 ) => {
   logFirebaseFetch("onSnapshot:subscribe", {
     collection: "applicants",
@@ -80,7 +159,16 @@ export const subscribeToApplicantFormData = (
 
       if (!data) {
         onApplicantFormData({})
+        if (onStatusUpdate) {
+          onStatusUpdate("started")
+        }
         return
+      }
+
+      const applicantStatus: ApplicantStatus = data.status === "submitted" ? "submitted" : "started"
+
+      if (onStatusUpdate) {
+        onStatusUpdate(applicantStatus)
       }
 
       onApplicantFormData({

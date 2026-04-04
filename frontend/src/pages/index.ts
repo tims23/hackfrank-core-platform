@@ -8,5 +8,5 @@ export { Profile } from "./Profile"
 export { ProfileDetail } from "./ProfileDetail"
 export { Login } from "./Login"
 export { Application } from "./Register"
-export { ApplicationForm } from "./ApplicationForm"
+export { ApplicationForm } from "./ApplicationForm/ApplicationForm"
 

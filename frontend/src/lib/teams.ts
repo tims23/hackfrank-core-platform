@@ -322,6 +322,58 @@ export const declinePendingMember = async (teamDocId: string, pendingMemberId: s
   })
 }
 
+export const leavePendingTeam = async (teamDocId: string, memberId: string) => {
+  const normalizedMemberId = memberId.trim()
+
+  logFirebaseFetch("firestore:write:start", {
+    collection: "teams",
+    operation: "updateDoc",
+    id: teamDocId,
+    mode: "leave-pending-team",
+    memberId: normalizedMemberId,
+  })
+
+  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
+    memberIds: arrayRemove(normalizedMemberId),
+    pendingMemberIds: arrayRemove(normalizedMemberId),
+    updatedAt: serverTimestamp(),
+  })
+
+  logFirebaseFetch("firestore:write:success", {
+    collection: "teams",
+    operation: "updateDoc",
+    id: teamDocId,
+    mode: "leave-pending-team",
+    memberId: normalizedMemberId,
+  })
+}
+
+export const kickPendingTeamMember = async (teamDocId: string, memberId: string) => {
+  const normalizedMemberId = memberId.trim()
+
+  logFirebaseFetch("firestore:write:start", {
+    collection: "teams",
+    operation: "updateDoc",
+    id: teamDocId,
+    mode: "kick-team-member",
+    memberId: normalizedMemberId,
+  })
+
+  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
+    memberIds: arrayRemove(normalizedMemberId),
+    pendingMemberIds: arrayRemove(normalizedMemberId),
+    updatedAt: serverTimestamp(),
+  })
+
+  logFirebaseFetch("firestore:write:success", {
+    collection: "teams",
+    operation: "updateDoc",
+    id: teamDocId,
+    mode: "kick-team-member",
+    memberId: normalizedMemberId,
+  })
+}
+
 export const subscribeToTeams = (
   onTeamsUpdate: (teams: TeamRecord[]) => void,
   onError?: (error: Error) => void,
