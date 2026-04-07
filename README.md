@@ -2,6 +2,8 @@
 
 The HackFrank Core Platform powers all core processes of the HackFrank Hackathon. It manages participants, teams, partner cases, submissions, and jury evaluations in a unified system.
 
+<img width="1257" height="799" alt="image" src="https://github.com/user-attachments/assets/7d8bc50c-4d4a-4ae4-9546-e9ac85461a65" />
+
 ## Overview
 The platform supports:
 - participant registration and profiles  
