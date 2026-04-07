@@ -19,13 +19,15 @@ const buildRequestUrl = (endpoint: string): string => {
     return endpoint
   }
 
+  const apiProxyTarget = (import.meta.env.VITE_API_PROXY_TARGET as string | undefined)?.trim()
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
+  const selectedBaseUrl = apiProxyTarget || apiBaseUrl
 
-  if (!apiBaseUrl) {
+  if (!selectedBaseUrl) {
     return endpoint
   }
 
-  const normalizedBase = apiBaseUrl.replace(/\/$/, "")
+  const normalizedBase = selectedBaseUrl.replace(/\/$/, "")
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`
 
   // If the base URL already includes /api and endpoint starts with /api, avoid /api/api.
