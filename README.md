@@ -19,18 +19,22 @@ The platform supports:
 ## Project Structure
 
 ```
-hackfrank-core-platform/
-├── frontend/          # React + Vite + TypeScript
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ui/        # shadcn/ui components (Button, Card, etc.)
-│   │   │   └── layout/    # Layout components (Navbar, Layout)
-│   │   ├── pages/         # Page components (Dashboard, Teams, Cases, Submissions)
-│   │   ├── lib/           # Utilities (cn helper)
-│   │   └── index.css      # Global styles + Tailwind + HackFrank theme
-│   └── ...
-├── backend/           # Node.js backend (placeholder)
-├── shared/            # Shared types/schemas (placeholder)
+hackfrank-core-platform-luis/
+├── api/               # Vercel serverless API handlers
+│   ├── applicants.ts
+│   ├── teams.ts
+│   └── lib/           # Auth middleware + Firebase Admin helpers
+├── src/               # Main React app source
+│   ├── components/    # UI, auth guards, layout, team components
+│   ├── contexts/      # React context providers
+│   ├── lib/           # Client helpers (firebase, api, data)
+│   ├── pages/         # Route pages (dashboard, cases, teams, profile, application)
+│   └── assets/
+├── public/            # Static files
+├── frontend/          # Legacy/transition folder
+├── index.html
+├── vite.config.ts
+├── package.json
 └── README.md
 ```
 

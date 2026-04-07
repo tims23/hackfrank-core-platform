@@ -1,5 +1,6 @@
-import { collection, doc, documentId, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore"
+import { collection, doc, documentId, getDocs, onSnapshot, query, where } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
+import { apiCall } from "@/lib/api"
 
 export type ApplicantStatus = "started" | "submitted"
 
@@ -215,28 +216,19 @@ export const subscribeToApplicantFormData = (
 }
 
 export const createApplicant = async (uid: string): Promise<void> => {
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/applicants",
+    action: "create",
     id: uid,
   })
 
-  await setDoc(
-    doc(firestoreDb, "applicants", uid),
-    {
-      uid,
-      status: "started",
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  )
+  const result = await apiCall<{ success: boolean }>("/api/applicants", "create", {})
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:success", {
+    endpoint: "/api/applicants",
+    action: "create",
     id: uid,
+    success: result.success,
   })
 }
 
@@ -244,10 +236,7 @@ export const syncApplicantDraft = async (
   uid: string,
   applicationDraft: Partial<ApplicantFormInput>,
 ): Promise<void> => {
-  const payload: Record<string, unknown> = {
-    uid,
-    updatedAt: serverTimestamp(),
-  }
+  const payload: Record<string, unknown> = {}
 
   if ("prename" in applicationDraft) {
     payload.prename = (applicationDraft.prename ?? "").trim()
@@ -280,16 +269,17 @@ export const syncApplicantDraft = async (
     payload.programmingSkillLevel = (applicationDraft.programmingSkillLevel ?? "").trim()
   }
   if ("generalSkills" in applicationDraft) {
-    payload.skills = (applicationDraft.generalSkills ?? "")
+    payload.generalSkills = (applicationDraft.generalSkills ?? "")
       .split(",")
       .map((skill) => skill.trim())
       .filter((skill) => skill.length > 0)
+      .join(", ")
   }
   if ("hackathonsAttended" in applicationDraft) {
     const parsedHackathonsAttended = Number.parseInt(applicationDraft.hackathonsAttended ?? "", 10)
     payload.hackathonsAttended = Number.isFinite(parsedHackathonsAttended)
-      ? Math.max(0, parsedHackathonsAttended)
-      : 0
+      ? String(Math.max(0, parsedHackathonsAttended))
+      : ""
   }
   if ("teamCode" in applicationDraft) {
     payload.teamCode = (applicationDraft.teamCode ?? "").trim()
@@ -306,36 +296,27 @@ export const syncApplicantDraft = async (
   if ("newTeamMaxMembers" in applicationDraft) {
     const parsedNewTeamMaxMembers = Number.parseInt(applicationDraft.newTeamMaxMembers ?? "", 10)
     payload.newTeamMaxMembers = Number.isFinite(parsedNewTeamMaxMembers)
-      ? Math.max(2, Math.min(4, parsedNewTeamMaxMembers))
-      : 2
+      ? String(Math.max(2, Math.min(4, parsedNewTeamMaxMembers)))
+      : ""
   }
 
-  logFirebaseFetch("firestore:write:start", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/applicants",
+    action: "sync-draft",
     id: uid,
-    mode: "draft-sync",
   })
 
-  await setDoc(doc(firestoreDb, "applicants", uid), payload, { merge: true })
+  await apiCall<{ success: boolean }>("/api/applicants", "sync-draft", payload)
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:success", {
+    endpoint: "/api/applicants",
+    action: "sync-draft",
     id: uid,
-    mode: "draft-sync",
   })
 }
 
 export const submitApplicantForm = async (uid: string, applicant: ApplicantFormInput): Promise<void> => {
-  const normalizedGeneralSkills = applicant.generalSkills
-    .split(",")
-    .map((skill) => skill.trim())
-    .filter((skill) => skill.length > 0)
-
-  const parsedHackathonsAttended = Number.parseInt(applicant.hackathonsAttended, 10)
-
-  const normalizedApplicant: ApplicantFormInput = {
+  const normalizedApplicant = {
     prename: applicant.prename.trim(),
     surname: applicant.surname.trim(),
     birthday: applicant.birthday.trim(),
@@ -346,10 +327,12 @@ export const submitApplicantForm = async (uid: string, applicant: ApplicantFormI
     currentCv: applicant.currentCv.trim(),
     motivation: applicant.motivation.trim(),
     programmingSkillLevel: applicant.programmingSkillLevel.trim(),
-    generalSkills: normalizedGeneralSkills.join(", "),
-    hackathonsAttended: Number.isFinite(parsedHackathonsAttended)
-      ? String(parsedHackathonsAttended)
-      : "0",
+    generalSkills: applicant.generalSkills
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter((skill) => skill.length > 0)
+      .join(", "),
+    hackathonsAttended: applicant.hackathonsAttended.trim(),
     teamCode: applicant.teamCode.trim(),
     teamSelectionMode: applicant.teamSelectionMode,
     newTeamName: applicant.newTeamName.trim(),
@@ -357,42 +340,17 @@ export const submitApplicantForm = async (uid: string, applicant: ApplicantFormI
     newTeamMaxMembers: applicant.newTeamMaxMembers.trim(),
   }
 
-  logFirebaseFetch("firestore:write:start", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/applicants",
+    action: "submit",
     id: uid,
   })
 
-  await setDoc(
-    doc(firestoreDb, "applicants", uid),
-    {
-      uid,
-      prename: normalizedApplicant.prename,
-      surname: normalizedApplicant.surname,
-      birthday: normalizedApplicant.birthday,
-      gender: normalizedApplicant.gender,
-      phoneNumber: normalizedApplicant.phoneNumber,
-      nationality: normalizedApplicant.nationality,
-      university: normalizedApplicant.university,
-      currentCv: normalizedApplicant.currentCv,
-      motivation: normalizedApplicant.motivation,
-      programmingSkillLevel: normalizedApplicant.programmingSkillLevel,
-      skills: normalizedGeneralSkills,
-      hackathonsAttended: Number.parseInt(normalizedApplicant.hackathonsAttended, 10),
-      teamCode: normalizedApplicant.teamCode,
-      teamSelectionMode: normalizedApplicant.teamSelectionMode,
-      newTeamName: normalizedApplicant.newTeamName,
-      newTeamDescription: normalizedApplicant.newTeamDescription,
-      newTeamMaxMembers: Number.parseInt(normalizedApplicant.newTeamMaxMembers || "2", 10),
-      status: "submitted",
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  )
+  await apiCall<{ success: boolean }>("/api/applicants", "submit", normalizedApplicant)
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "applicants",
-    operation: "setDoc",
+  logFirebaseFetch("api:write:success", {
+    endpoint: "/api/applicants",
+    action: "submit",
     id: uid,
   })
 }

@@ -12,6 +12,7 @@ import {
   where,
 } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
+import { apiCall } from "@/lib/api"
 
 export type TeamStatus = "APPLICATION_PENDING" | "ACTIVE"
 
@@ -100,108 +101,71 @@ const normalizeTeam = (
     : [],
 })
 
-const generateTeamCode = (): string =>
-  Math.random().toString(36).slice(2, 8).toUpperCase()
-
 export const createPendingTeamFromApplication = async (
   leaderId: string,
   name: string,
   description: string,
   maxMembers: number,
 ): Promise<{ teamCode: string }> => {
-  const normalizedName = name.trim()
-  const normalizedDescription = description.trim()
-  const normalizedMaxMembers = Math.max(2, Math.min(4, maxMembers))
-  const teamCode = generateTeamCode()
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "addDoc",
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "create",
     leaderId,
-    mode: "application-create-team",
   })
 
-  await addDoc(collection(firestoreDb, "teams"), {
-    id: Date.now(),
-    name: normalizedName,
-    maxMembers: normalizedMaxMembers,
-    memberIds: [leaderId],
-    skills: [],
-    looking: true,
-    case: "",
-    description: normalizedDescription,
-    leaderId,
-    teamCode,
-    status: "APPLICATION_PENDING",
-    pendingMemberIds: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    const result = await apiCall<{ teamCode: string }>("/api/teams", "create", {
+      name,
+      description,
+      maxMembers,
+    })
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "addDoc",
-    leaderId,
-    mode: "application-create-team",
-  })
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "create",
+      leaderId,
+    })
 
-  return { teamCode }
+    return result
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "create",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
 }
 
 export const joinPendingTeamByCode = async (teamCode: string, applicantId: string): Promise<boolean> => {
   const normalizedTeamCode = teamCode.trim().toUpperCase()
-  const normalizedApplicantId = applicantId.trim()
 
-  if (!normalizedTeamCode || !normalizedApplicantId) {
-    return false
-  }
-
-  logFirebaseFetch("getDocs:start", {
-    collection: "teams",
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "join",
     teamCode: normalizedTeamCode,
-    mode: "application-join-team",
   })
 
-  const teamsQuery = query(
-    collection(firestoreDb, "teams"),
-    where("teamCode", "==", normalizedTeamCode),
-    where("status", "==", "APPLICATION_PENDING"),
-  )
+  try {
+    const result = await apiCall<{ joined: boolean }>("/api/teams", "join", {
+      teamCode: normalizedTeamCode,
+    })
 
-  const teamsSnapshot = await getDocs(teamsQuery)
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "join",
+      teamCode: normalizedTeamCode,
+    })
 
-  logFirebaseFetch("getDocs:success", {
-    collection: "teams",
-    teamCode: normalizedTeamCode,
-    size: teamsSnapshot.size,
-    mode: "application-join-team",
-  })
-
-  const matchedTeamDoc = teamsSnapshot.docs[0]
-  if (!matchedTeamDoc) {
-    return false
+    return result.joined
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "join",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
   }
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: matchedTeamDoc.id,
-    mode: "application-join-team",
-  })
-
-  await updateDoc(matchedTeamDoc.ref, {
-    pendingMemberIds: arrayUnion(normalizedApplicantId),
-    updatedAt: serverTimestamp(),
-  })
-
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: matchedTeamDoc.id,
-    mode: "application-join-team",
-  })
-
-  return true
 }
 
 export const subscribeToPendingTeamByCode = (
@@ -272,106 +236,114 @@ export const subscribeToPendingTeamByCode = (
 }
 
 export const approvePendingMember = async (teamDocId: string, pendingMemberId: string) => {
-  const normalizedPendingMemberId = pendingMemberId.trim()
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "approve-pending-member",
-    pendingMemberId: normalizedPendingMemberId,
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "approve-member",
+    teamDocId,
   })
 
-  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
-    pendingMemberIds: arrayRemove(normalizedPendingMemberId),
-    memberIds: arrayUnion(normalizedPendingMemberId),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    await apiCall<{ success: boolean }>("/api/teams", "approve-member", {
+      teamDocId,
+      memberId: pendingMemberId,
+    })
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "approve-pending-member",
-    pendingMemberId: normalizedPendingMemberId,
-  })
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "approve-member",
+      teamDocId,
+    })
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "approve-member",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
 }
 
 export const declinePendingMember = async (teamDocId: string, pendingMemberId: string) => {
-  const normalizedPendingMemberId = pendingMemberId.trim()
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "decline-pending-member",
-    pendingMemberId: normalizedPendingMemberId,
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "decline-member",
+    teamDocId,
   })
 
-  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
-    pendingMemberIds: arrayRemove(normalizedPendingMemberId),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    await apiCall<{ success: boolean }>("/api/teams", "decline-member", {
+      teamDocId,
+      memberId: pendingMemberId,
+    })
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "decline-pending-member",
-    pendingMemberId: normalizedPendingMemberId,
-  })
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "decline-member",
+      teamDocId,
+    })
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "decline-member",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
 }
 
 export const leavePendingTeam = async (teamDocId: string, memberId: string) => {
-  const normalizedMemberId = memberId.trim()
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "leave-pending-team",
-    memberId: normalizedMemberId,
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "leave",
+    teamDocId,
   })
 
-  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
-    memberIds: arrayRemove(normalizedMemberId),
-    pendingMemberIds: arrayRemove(normalizedMemberId),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    await apiCall<{ success: boolean }>("/api/teams", "leave", {
+      teamDocId,
+    })
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "leave-pending-team",
-    memberId: normalizedMemberId,
-  })
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "leave",
+      teamDocId,
+    })
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "leave",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
 }
 
 export const kickPendingTeamMember = async (teamDocId: string, memberId: string) => {
-  const normalizedMemberId = memberId.trim()
-
-  logFirebaseFetch("firestore:write:start", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "kick-team-member",
-    memberId: normalizedMemberId,
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "kick",
+    teamDocId,
   })
 
-  await updateDoc(doc(firestoreDb, "teams", teamDocId), {
-    memberIds: arrayRemove(normalizedMemberId),
-    pendingMemberIds: arrayRemove(normalizedMemberId),
-    updatedAt: serverTimestamp(),
-  })
+  try {
+    await apiCall<{ success: boolean }>("/api/teams", "kick", {
+      teamDocId,
+      memberId,
+    })
 
-  logFirebaseFetch("firestore:write:success", {
-    collection: "teams",
-    operation: "updateDoc",
-    id: teamDocId,
-    mode: "kick-team-member",
-    memberId: normalizedMemberId,
-  })
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "kick",
+      teamDocId,
+    })
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "kick",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
 }
 
 export const subscribeToTeams = (
