@@ -27,6 +27,8 @@ export async function submitApplicantForm(
   uid: string,
   applicant: ApplicantFormInput,
 ): Promise<void> {
+  console.log("[api/lib/applicants] submitApplicantForm start", { uid })
+
   const skills = applicant.generalSkills
     .split(",")
     .map((skill) => skill.trim())
@@ -58,12 +60,22 @@ export async function submitApplicantForm(
     submittedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })
+
+  console.log("[api/lib/applicants] submitApplicantForm complete", {
+    uid,
+    skillCount: skills.length,
+  })
 }
 
 export async function syncApplicantDraft(
   uid: string,
   updates: Partial<ApplicantFormInput>,
 ): Promise<void> {
+  console.log("[api/lib/applicants] syncApplicantDraft start", {
+    uid,
+    updateKeys: Object.keys(updates),
+  })
+
   const payload: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
   }
@@ -93,9 +105,16 @@ export async function syncApplicantDraft(
   }
 
   await db.collection("applicants").doc(uid).update(payload)
+
+  console.log("[api/lib/applicants] syncApplicantDraft complete", {
+    uid,
+    payloadKeys: Object.keys(payload),
+  })
 }
 
 export async function createApplicant(uid: string): Promise<void> {
+  console.log("[api/lib/applicants] createApplicant start", { uid })
+
   await db.collection("applicants").doc(uid).set({
     userId: uid,
     status: "started",
@@ -119,4 +138,6 @@ export async function createApplicant(uid: string): Promise<void> {
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })
+
+  console.log("[api/lib/applicants] createApplicant complete", { uid })
 }

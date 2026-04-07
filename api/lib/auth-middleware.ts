@@ -5,8 +5,13 @@ export async function verifyAuthToken(
   req: VercelRequest,
 ): Promise<{ uid: string } | null> {
   const authHeader = req.headers.authorization
+  const requestPath = req.url ?? "unknown"
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.warn("[api/auth] Missing or invalid authorization header", {
+      method: req.method,
+      path: requestPath,
+    })
     return null
   }
 
@@ -14,9 +19,16 @@ export async function verifyAuthToken(
 
   try {
     const decodedToken = await auth.verifyIdToken(token)
+    console.log("[api/auth] Token verified", {
+      method: req.method,
+      path: requestPath,
+      uid: decodedToken.uid,
+    })
     return { uid: decodedToken.uid }
   } catch (error) {
-    console.error("verifyAuthToken failed", {
+    console.error("[api/auth] verifyAuthToken failed", {
+      method: req.method,
+      path: requestPath,
       message: error instanceof Error ? error.message : String(error),
     })
     return null
@@ -27,17 +39,36 @@ export function withAuth(
   handler: (req: VercelRequest, res: VercelResponse, uid: string) => Promise<void> | void,
 ) {
   return async (req: VercelRequest, res: VercelResponse) => {
+    console.log("[api] Incoming request", {
+      method: req.method,
+      path: req.url,
+    })
+
     const auth = await verifyAuthToken(req)
 
     if (!auth) {
+      console.warn("[api] Unauthorized request rejected", {
+        method: req.method,
+        path: req.url,
+      })
       res.status(401).json({ error: "Unauthorized" })
       return
     }
 
     try {
       await handler(req, res, auth.uid)
+      console.log("[api] Request handled successfully", {
+        method: req.method,
+        path: req.url,
+        uid: auth.uid,
+      })
     } catch (error) {
-      console.error("API error:", error)
+      console.error("[api] Request failed", {
+        method: req.method,
+        path: req.url,
+        uid: auth.uid,
+        message: error instanceof Error ? error.message : String(error),
+      })
       res.status(500).json({
         error: error instanceof Error ? error.message : "Internal server error",
       })
