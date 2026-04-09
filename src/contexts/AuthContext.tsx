@@ -59,12 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+      setHasParticipantAccess(false)
+
       if (firebaseUser) {
         setUser(mapFirebaseUser(firebaseUser))
         setIsAuthenticated(true)
+        setIsParticipantLoading(true)
       } else {
         setUser(null)
         setIsAuthenticated(false)
+        setIsParticipantLoading(false)
       }
 
       setIsLoading(false)
@@ -122,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true
     } catch (error) {
       logFirebaseFetch("firestore:write:error", {
-        collection: "applicants",
+        collection: "participants/details",
         operation: "setDoc",
         message: error instanceof Error ? error.message : String(error),
       })
@@ -159,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true
     } catch (error) {
       logFirebaseFetch("firestore:write:error", {
-        collection: "applicants",
+        collection: "participants/details",
         operation: "setDoc",
         message: error instanceof Error ? error.message : String(error),
       })
@@ -178,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true
     } catch (error) {
       logFirebaseFetch("firestore:write:error", {
-        collection: "applicants",
+        collection: "participants/details",
         operation: "setDoc",
         mode: "draft-sync",
         message: error instanceof Error ? error.message : String(error),

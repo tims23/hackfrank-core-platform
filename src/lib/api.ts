@@ -46,6 +46,21 @@ export async function apiCall<T>(
   action: string,
   data: Record<string, unknown>,
 ): Promise<T> {
+  return apiRequest<T>(endpoint, "POST", {
+    action,
+    ...data,
+  })
+}
+
+export async function apiGet<T>(endpoint: string): Promise<T> {
+  return apiRequest<T>(endpoint, "GET")
+}
+
+async function apiRequest<T>(
+  endpoint: string,
+  method: "GET" | "POST",
+  payload?: Record<string, unknown>,
+): Promise<T> {
   const token = await getAuthToken()
   if (!token) {
     throw new Error("User not authenticated")
@@ -54,15 +69,12 @@ export async function apiCall<T>(
   const requestUrl = buildRequestUrl(endpoint)
 
   const response = await fetch(requestUrl, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({
-      action,
-      ...data,
-    }),
+    ...(method === "POST" ? { body: JSON.stringify(payload ?? {}) } : {}),
   })
 
   const responseText = await response.text()

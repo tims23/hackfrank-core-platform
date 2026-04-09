@@ -1,14 +1,7 @@
 import {
-  addDoc,
-  arrayRemove,
-  arrayUnion,
   collection,
-  doc,
-  getDocs,
   onSnapshot,
   query,
-  serverTimestamp,
-  updateDoc,
   where,
 } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
@@ -144,6 +137,7 @@ export const joinPendingTeamByCode = async (teamCode: string, applicantId: strin
     endpoint: "/api/teams",
     action: "join",
     teamCode: normalizedTeamCode,
+    applicantId,
   })
 
   try {
@@ -155,6 +149,7 @@ export const joinPendingTeamByCode = async (teamCode: string, applicantId: strin
       endpoint: "/api/teams",
       action: "join",
       teamCode: normalizedTeamCode,
+      applicantId,
     })
 
     return result.joined
@@ -296,6 +291,7 @@ export const leavePendingTeam = async (teamDocId: string, memberId: string) => {
     endpoint: "/api/teams",
     action: "leave",
     teamDocId,
+    memberId,
   })
 
   try {
@@ -307,6 +303,7 @@ export const leavePendingTeam = async (teamDocId: string, memberId: string) => {
       endpoint: "/api/teams",
       action: "leave",
       teamDocId,
+      memberId,
     })
   } catch (error) {
     logFirebaseFetch("api:write:error", {

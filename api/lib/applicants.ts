@@ -23,6 +23,66 @@ export type ApplicantFormInput = {
   newTeamMaxMembers: string
 }
 
+export type ApplicantRecord = ApplicantFormInput & {
+  uid: string
+  status: ApplicantStatus
+  skills?: string[]
+}
+
+const getParticipantApplicationDocRef = (uid: string) =>
+  db.collection("participants").doc(uid).collection("details").doc("application")
+
+export async function fetchApplicantFormData(uid: string): Promise<ApplicantRecord | null> {
+  console.log("[api/lib/applicants] fetchApplicantFormData start", { uid })
+
+  const snapshot = await getParticipantApplicationDocRef(uid).get()
+
+  if (!snapshot.exists) {
+    console.log("[api/lib/applicants] fetchApplicantFormData missing", { uid })
+    return null
+  }
+
+  const data = snapshot.data() as Partial<ApplicantRecord> | undefined
+  const status: ApplicantStatus = data?.status === "submitted" ? "submitted" : "started"
+
+  const result: ApplicantRecord = {
+    uid,
+    status,
+    prename: typeof data?.prename === "string" ? data.prename : "",
+    surname: typeof data?.surname === "string" ? data.surname : "",
+    birthday: typeof data?.birthday === "string" ? data.birthday : "",
+    gender: typeof data?.gender === "string" ? data.gender : "",
+    phoneNumber: typeof data?.phoneNumber === "string" ? data.phoneNumber : "",
+    nationality: typeof data?.nationality === "string" ? data.nationality : "",
+    university: typeof data?.university === "string" ? data.university : "",
+    currentCv: typeof data?.currentCv === "string" ? data.currentCv : "",
+    motivation: typeof data?.motivation === "string" ? data.motivation : "",
+    programmingSkillLevel: typeof data?.programmingSkillLevel === "string" ? data.programmingSkillLevel : "",
+    generalSkills: typeof data?.generalSkills === "string" ? data.generalSkills : "",
+    hackathonsAttended: typeof data?.hackathonsAttended === "string" ? data.hackathonsAttended : "",
+    teamCode: typeof data?.teamCode === "string" ? data.teamCode : "",
+    teamSelectionMode:
+      data?.teamSelectionMode === "create" || data?.teamSelectionMode === "skip"
+        ? data.teamSelectionMode
+        : "join",
+    newTeamName: typeof data?.newTeamName === "string" ? data.newTeamName : "",
+    newTeamDescription: typeof data?.newTeamDescription === "string" ? data.newTeamDescription : "",
+    newTeamMaxMembers:
+      typeof data?.newTeamMaxMembers === "string" ? data.newTeamMaxMembers : "",
+    skills: Array.isArray(data?.skills)
+      ? data.skills.filter((skill): skill is string => typeof skill === "string")
+      : [],
+  }
+
+  console.log("[api/lib/applicants] fetchApplicantFormData complete", {
+    uid,
+    status,
+    hasData: true,
+  })
+
+  return result
+}
+
 export async function submitApplicantForm(
   uid: string,
   applicant: ApplicantFormInput,
@@ -37,7 +97,7 @@ export async function submitApplicantForm(
   const hackathonsAttended = Number.parseInt(applicant.hackathonsAttended, 10)
   const newTeamMaxMembers = Number.parseInt(applicant.newTeamMaxMembers || "2", 10)
 
-  await db.collection("applicants").doc(uid).update({
+  await getParticipantApplicationDocRef(uid).set({
     prename: applicant.prename,
     surname: applicant.surname,
     birthday: applicant.birthday,
@@ -59,7 +119,7 @@ export async function submitApplicantForm(
     status: "submitted",
     submittedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-  })
+  }, { merge: true })
 
   console.log("[api/lib/applicants] submitApplicantForm complete", {
     uid,
@@ -104,7 +164,7 @@ export async function syncApplicantDraft(
     }
   }
 
-  await db.collection("applicants").doc(uid).update(payload)
+  await getParticipantApplicationDocRef(uid).set(payload, { merge: true })
 
   console.log("[api/lib/applicants] syncApplicantDraft complete", {
     uid,
@@ -115,7 +175,7 @@ export async function syncApplicantDraft(
 export async function createApplicant(uid: string): Promise<void> {
   console.log("[api/lib/applicants] createApplicant start", { uid })
 
-  await db.collection("applicants").doc(uid).set({
+  await getParticipantApplicationDocRef(uid).set({
     userId: uid,
     status: "started",
     prename: "",
@@ -137,7 +197,7 @@ export async function createApplicant(uid: string): Promise<void> {
     newTeamMaxMembers: "",
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-  })
+  }, { merge: true })
 
   console.log("[api/lib/applicants] createApplicant complete", { uid })
 }

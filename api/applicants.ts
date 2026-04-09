@@ -1,8 +1,26 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import { withAuth } from "./lib/auth-middleware.ts"
-import { submitApplicantForm, syncApplicantDraft, createApplicant, type ApplicantFormInput } from "./lib/applicants.ts"
+import {
+  fetchApplicantFormData,
+  submitApplicantForm,
+  syncApplicantDraft,
+  createApplicant,
+  type ApplicantFormInput,
+} from "./lib/applicants.ts"
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: string) => {
+  if (req.method === "GET") {
+    console.log("[api/applicants] GET request received", { uid })
+
+    const application = await fetchApplicantFormData(uid)
+
+    res.status(200).json({
+      success: true,
+      application,
+    })
+    return
+  }
+
   if (req.method === "POST") {
     const { action, ...data } = req.body
     console.log("[api/applicants] POST action received", {

@@ -1,6 +1,6 @@
-import { collection, doc, documentId, getDocs, onSnapshot, query, where } from "firebase/firestore"
+import { doc, getDoc, onSnapshot } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
-import { apiCall } from "@/lib/api"
+import { apiCall, apiGet } from "@/lib/api"
 
 export type ApplicantStatus = "started" | "submitted"
 
@@ -46,9 +46,58 @@ export type ApplicantFormInput = {
   newTeamMaxMembers: string
 }
 
+export type ApplicantFormResponse = {
+  success: boolean
+  application: (Partial<ApplicantFormInput> & { status: ApplicantStatus; skills?: string[] }) | null
+}
+
 export type ApplicantProfileLookupResult = {
   namesById: Record<string, string>
   statusesById: Record<string, ApplicantStatus>
+}
+
+export const fetchApplicantFormData = async (
+  uid: string,
+): Promise<Partial<ApplicantFormInput> & { status: ApplicantStatus }> => {
+  logFirebaseFetch("api:read:start", {
+    endpoint: "/api/applicants",
+    action: "fetch",
+    id: uid,
+  })
+
+  const result = await apiGet<ApplicantFormResponse>("/api/applicants")
+
+  logFirebaseFetch("api:read:success", {
+    endpoint: "/api/applicants",
+    action: "fetch",
+    id: uid,
+    hasApplication: result.application !== null,
+  })
+
+  const application = result.application ?? null
+
+  return {
+    status: application?.status === "submitted" ? "submitted" : "started",
+    prename: application?.prename ?? "",
+    surname: application?.surname ?? "",
+    birthday: application?.birthday ?? "",
+    gender: application?.gender ?? "",
+    phoneNumber: application?.phoneNumber ?? "",
+    nationality: application?.nationality ?? "",
+    university: application?.university ?? "",
+    currentCv: application?.currentCv ?? "",
+    motivation: application?.motivation ?? "",
+    programmingSkillLevel: application?.programmingSkillLevel ?? "",
+    generalSkills: application?.generalSkills ?? application?.skills?.join(", ") ?? "",
+    hackathonsAttended:
+      application?.hackathonsAttended !== undefined ? String(application.hackathonsAttended) : "",
+    teamCode: application?.teamCode ?? "",
+    teamSelectionMode: application?.teamSelectionMode ?? "join",
+    newTeamName: application?.newTeamName ?? "",
+    newTeamDescription: application?.newTeamDescription ?? "",
+    newTeamMaxMembers:
+      application?.newTeamMaxMembers !== undefined ? String(application.newTeamMaxMembers) : "",
+  }
 }
 
 const readApplicantString = (value: unknown): string => (typeof value === "string" ? value : "")
@@ -61,6 +110,9 @@ const readApplicantStringArray = (value: unknown): string[] =>
 
 const readApplicantNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null
+
+const getParticipantApplicationDocRef = (uid: string) =>
+  doc(firestoreDb, "participants", uid, "private", "application")
 
 const chunkIds = (ids: string[], chunkSize: number): string[][] => {
   const chunks: string[][] = []
@@ -89,38 +141,74 @@ export const fetchApplicantProfilesByIds = async (
   const statusesById: Record<string, ApplicantStatus> = {}
 
   for (const idsChunk of idChunks) {
-    logFirebaseFetch("getDocs:start", {
-      collection: "applicants",
+      logFirebaseFetch("getDoc:start", {
+        collection: "participants/details",
       idCount: idsChunk.length,
       mode: "member-name-lookup",
     })
 
-    const applicantQuery = query(
-      collection(firestoreDb, "applicants"),
-      where(documentId(), "in", idsChunk),
+    const profileResults = await Promise.allSettled(
+      idsChunk.map(async (applicantId) => {
+          logFirebaseFetch("getDoc:start", {
+            collection: "participants/details",
+          id: applicantId,
+          mode: "member-name-lookup",
+        })
+
+        const applicationSnapshot = await getDoc(getParticipantApplicationDocRef(applicantId))
+
+          logFirebaseFetch("getDoc:success", {
+            collection: "participants/details",
+          id: applicantId,
+          exists: applicationSnapshot.exists(),
+          fromCache: applicationSnapshot.metadata.fromCache,
+          mode: "member-name-lookup",
+        })
+
+        if (!applicationSnapshot.exists()) {
+          return null
+        }
+
+        const data = applicationSnapshot.data() as Partial<ApplicantRecord>
+        return {
+          applicantId,
+          data,
+        }
+      }),
     )
 
-    const applicantsSnapshot = await getDocs(applicantQuery)
+    for (const profileResult of profileResults) {
+      if (profileResult.status === "rejected") {
+          logFirebaseFetch("getDoc:error", {
+            collection: "participants/details",
+          mode: "member-name-lookup",
+          message: profileResult.reason instanceof Error ? profileResult.reason.message : String(profileResult.reason),
+        })
+        continue
+      }
 
-    logFirebaseFetch("getDocs:success", {
-      collection: "applicants",
-      idCount: idsChunk.length,
-      size: applicantsSnapshot.size,
-      mode: "member-name-lookup",
-    })
+      const value = profileResult.value
+      if (!value) {
+        continue
+      }
 
-    applicantsSnapshot.forEach((applicantDoc) => {
-      const data = applicantDoc.data() as Partial<ApplicantRecord>
+      const { applicantId, data } = value
       const prename = readApplicantString(data.prename).trim()
       const surname = readApplicantString(data.surname).trim()
       const fullName = `${prename} ${surname}`.trim()
       const applicantStatus: ApplicantStatus = data.status === "submitted" ? "submitted" : "started"
 
       if (fullName.length > 0) {
-        namesById[applicantDoc.id] = fullName
+        namesById[applicantId] = fullName
       }
 
-      statusesById[applicantDoc.id] = applicantStatus
+      statusesById[applicantId] = applicantStatus
+    }
+
+      logFirebaseFetch("getDoc:success", {
+        collection: "participants/details",
+      idCount: idsChunk.length,
+      mode: "member-name-lookup",
     })
   }
 
@@ -142,17 +230,17 @@ export const subscribeToApplicantFormData = (
   onStatusUpdate?: (status: ApplicantStatus) => void,
 ) => {
   logFirebaseFetch("onSnapshot:subscribe", {
-    collection: "applicants",
+    collection: "participants/details",
     id: uid,
   })
 
   return onSnapshot(
-    doc(firestoreDb, "applicants", uid),
+    getParticipantApplicationDocRef(uid),
     (snapshot) => {
       const data = snapshot.data() as Partial<ApplicantRecord> | undefined
 
       logFirebaseFetch("onSnapshot:update", {
-        collection: "applicants",
+        collection: "participants/details",
         id: uid,
         exists: snapshot.exists(),
         fromCache: snapshot.metadata.fromCache,
@@ -203,7 +291,7 @@ export const subscribeToApplicantFormData = (
     },
     (snapshotError) => {
       logFirebaseFetch("onSnapshot:error", {
-        collection: "applicants",
+        collection: "participants/details",
         id: uid,
         message: snapshotError.message,
       })

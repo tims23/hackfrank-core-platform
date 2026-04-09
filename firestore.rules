@@ -11,13 +11,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /teams/{teamId} {
-      allow read: if true;
-      allow write: if false;
+    match /participants/{participantId}/details/{documentId} {
+      allow read, write: if false;
     }
 
-    match /applicants/{applicantId} {
-      allow read: if isSignedIn();
+    match /teams/{teamId} {
+      allow read: if true;
       allow write: if false;
     }
 

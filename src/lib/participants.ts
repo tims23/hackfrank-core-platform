@@ -1,8 +1,10 @@
-import { collection, onSnapshot } from "firebase/firestore"
+import { collection, doc, onSnapshot } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 
 export type Participant = {
   id: string
+  status?: string
+   // TODO: Make `status` mandatory in Participant once the database schema is migrated.
   name: string
   avatar: string
   role: string
@@ -43,6 +45,14 @@ const parseParticipantTeam = (explicitTeamId?: unknown): number | null => {
   }
 
   return null
+}
+
+const parseParticipantStatus = (value: unknown): string => {
+  if (typeof value !== "string") {
+    return ""
+  }
+
+  return value.trim()
 }
 
 const normalizeParticipant = (
@@ -105,23 +115,46 @@ export const subscribeToParticipantAccess = (
   onAccessUpdate: (hasParticipantAccess: boolean) => void,
   onError?: (error: Error) => void,
 ) => {
+  const normalizedUid = uid.trim()
+  const participantAccessDocRef = doc(firestoreDb, "participants", normalizedUid)
+
   logFirebaseFetch("onSnapshot:subscribe", {
     collection: "participants",
-    targetUid: uid,
+    targetUid: normalizedUid,
+    mode: "participant-access",
   })
 
   return onSnapshot(
-    collection(firestoreDb, "participants"),
+    participantAccessDocRef,
     (snapshot) => {
-      const hasParticipantAccess = snapshot.docs.some((participantDoc) => {
-        const data = participantDoc.data() as { id?: unknown }
-        return parseParticipantId(participantDoc.id, data.id) === uid
-      })
+      if (snapshot.metadata.fromCache) {
+        logFirebaseFetch("onSnapshot:update", {
+          collection: "participants",
+          targetUid: normalizedUid,
+          mode: "participant-access",
+          exists: snapshot.exists(),
+          hasParticipantAccess: false,
+          fromCache: true,
+          cachePolicy: "deny",
+        })
+
+        onAccessUpdate(false)
+        return
+      }
+      const matchedParticipantData = snapshot.data() as
+        | { id?: unknown; status?: unknown }
+        | undefined
+      const participantUid = snapshot.id
+      const participantStatus = parseParticipantStatus(matchedParticipantData?.status)
+      const hasParticipantAccess = participantUid === normalizedUid && participantStatus === "APPROVED"
 
       logFirebaseFetch("onSnapshot:update", {
         collection: "participants",
-        targetUid: uid,
-        size: snapshot.size,
+        targetUid: normalizedUid,
+        mode: "participant-access",
+        exists: snapshot.exists(),
+        matchedParticipantDocId: snapshot.id,
+        participantStatus,
         hasParticipantAccess,
         fromCache: snapshot.metadata.fromCache,
       })
@@ -131,7 +164,8 @@ export const subscribeToParticipantAccess = (
     (snapshotError) => {
       logFirebaseFetch("onSnapshot:error", {
         collection: "participants",
-        targetUid: uid,
+        targetUid: normalizedUid,
+        mode: "participant-access",
         message: snapshotError.message,
       })
 

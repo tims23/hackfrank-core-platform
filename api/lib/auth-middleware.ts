@@ -1,6 +1,21 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node"
 import { auth } from "./firebase-admin.ts"
 
+function applyCorsHeaders(req: VercelRequest, res: VercelResponse): void {
+  const requestOrigin = req.headers.origin
+
+  // Reflect requesting origin in dev to support authenticated cross-origin API calls.
+  if (typeof requestOrigin === "string" && requestOrigin.length > 0) {
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin)
+    res.setHeader("Vary", "Origin")
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*")
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type")
+}
+
 export async function verifyAuthToken(
   req: VercelRequest,
 ): Promise<{ uid: string } | null> {
@@ -39,6 +54,13 @@ export function withAuth(
   handler: (req: VercelRequest, res: VercelResponse, uid: string) => Promise<void> | void,
 ) {
   return async (req: VercelRequest, res: VercelResponse) => {
+    applyCorsHeaders(req, res)
+
+    if (req.method === "OPTIONS") {
+      res.status(204).end()
+      return
+    }
+
     console.log("[api] Incoming request", {
       method: req.method,
       path: req.url,

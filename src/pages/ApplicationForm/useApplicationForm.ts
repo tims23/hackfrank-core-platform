@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/contexts"
 import {
+  fetchApplicantFormData,
   fetchApplicantProfilesByIds,
-  subscribeToApplicantFormData,
   type ApplicantStatus,
 } from "@/lib/applicants"
 import { subscribeToParticipants, type Participant } from "@/lib/participants"
@@ -237,32 +237,39 @@ export function useApplicationForm() {
     hasInitializedFromApplicant.current = false
     setIsFormDataLoading(true)
 
-    const unsubscribe = subscribeToApplicantFormData(
-      user.uid,
-      (applicantFormData) => {
-        if (!hasInitializedFromApplicant.current) {
-          setForm((currentForm) => {
-            const mergedForm = {
-              ...currentForm,
-              ...applicantFormData,
-            }
-            lastPersistedFormRef.current = normalizeFormState(mergedForm)
-            return mergedForm
-          })
-          hasInitializedFromApplicant.current = true
+    let isMounted = true
+
+    void fetchApplicantFormData(user.uid)
+      .then((applicantFormData) => {
+        if (!isMounted || hasInitializedFromApplicant.current) {
+          return
         }
 
-        setIsFormDataLoading(false)
-      },
-      () => {
-        setIsFormDataLoading(false)
-      },
-      (status) => {
-        setApplicantStatus(status)
-      },
-    )
+        const { status, ...applicantDraft } = applicantFormData
 
-    return () => unsubscribe()
+        setApplicantStatus(status)
+        setForm((currentForm) => {
+          const mergedForm = {
+            ...currentForm,
+            ...applicantDraft,
+          }
+          lastPersistedFormRef.current = normalizeFormState(mergedForm)
+          return mergedForm
+        })
+        hasInitializedFromApplicant.current = true
+      })
+      .catch(() => {
+        // Keep the initial empty form when the read fails; writes still work once the user retries.
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsFormDataLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [isAuthenticated, user])
 
   useEffect(() => {
