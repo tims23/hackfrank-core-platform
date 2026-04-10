@@ -122,7 +122,7 @@ export function ApplicationForm() {
                 onPrevStep={() => form.setStep(2)}
                 onProceedWithoutTeam={() => form.handleCompleteStep3("skip")}
                 onJoinTeam={() => form.handleCompleteStep3("join")}
-                onCreateTeam={() => form.handleCompleteStep3("create")}
+                onCreateTeam={(createTeamDraft) => form.handleCompleteStep3("create", createTeamDraft)}
                 onSubmitAsTeamMember={form.handleSubmitApplicationAsTeamMember}
                 onSubmitAsTeamLeader={() => form.handleCompleteStep3("join")}
                 onKickMember={form.handleKickTeamMember}

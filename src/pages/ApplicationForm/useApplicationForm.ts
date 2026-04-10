@@ -19,6 +19,7 @@ import {
 } from "@/lib/teams"
 import type {
   ApplicationFormState,
+  CreateTeamDraft,
   Step2Field,
 } from "./ApplicationForm.types"
 import {
@@ -82,12 +83,9 @@ export function useApplicationForm() {
     isNonEmpty(form.hackathonsAttended) &&
     hasValidHackathonsAttended
 
-  const parsedNewTeamMaxMembers = Number.parseInt(form.newTeamMaxMembers, 10)
   const hasCreatedPendingTeam =
     form.teamSelectionMode === "create" &&
-    isNonEmpty(form.newTeamName) &&
-    isNonEmpty(form.teamCode) &&
-    Number.isFinite(parsedNewTeamMaxMembers)
+    isNonEmpty(form.teamCode)
   const hasTeamCode = isNonEmpty(form.teamCode)
   const activeUserId = user?.uid ?? ""
   const isManagedTeamMember =
@@ -377,9 +375,6 @@ export function useApplicationForm() {
       const clearedStep3Values = {
         teamCode: "",
         teamSelectionMode: "join" as const,
-        newTeamName: "",
-        newTeamDescription: "",
-        newTeamMaxMembers: "",
       }
 
       setForm((currentForm) => ({
@@ -387,7 +382,10 @@ export function useApplicationForm() {
         ...clearedStep3Values,
       }))
 
-      const synced = await syncApplicationDraft(clearedStep3Values)
+      const synced = await syncApplicationDraft({
+        teamCode: clearedStep3Values.teamCode,
+        teamSelectionMode: clearedStep3Values.teamSelectionMode,
+      })
       if (!synced) {
         setError("You left the team, but we could not update your saved application draft.")
       }
@@ -575,11 +573,17 @@ export function useApplicationForm() {
     }
 
     setIsSubmitting(true)
-    const submitted = await submitApplication(form)
+    const synced = await syncApplicationDraft({
+      currentCv: form.currentCv,
+      motivation: form.motivation,
+      programmingSkillLevel: form.programmingSkillLevel,
+      generalSkills: form.generalSkills,
+      hackathonsAttended: form.hackathonsAttended,
+    })
     setIsSubmitting(false)
 
-    if (!submitted) {
-      setError("Could not submit application form. Please try again.")
+    if (!synced) {
+      setError("Could not save step 2. Please try again.")
       return
     }
 
@@ -599,7 +603,10 @@ export function useApplicationForm() {
     }
   }
 
-  const handleCompleteStep3 = async (mode: "join" | "create" | "skip") => {
+  const handleCompleteStep3 = async (
+    mode: "join" | "create" | "skip",
+    createTeamDraft?: CreateTeamDraft,
+  ) => {
     setError("")
 
     if (mode === "join" && !form.teamCode.trim()) {
@@ -607,18 +614,18 @@ export function useApplicationForm() {
       return
     }
 
-    if (mode === "create" && !form.newTeamName.trim()) {
+    if (mode === "create" && !createTeamDraft?.name.trim()) {
       setError("Please enter a team name or proceed without a team.")
       return
     }
 
-    if (mode === "create" && !form.newTeamDescription.trim()) {
+    if (mode === "create" && !createTeamDraft?.description.trim()) {
       setError("Please enter a team description or proceed without a team.")
       return
     }
 
     if (mode === "create") {
-      const parsedMaxMembers = Number.parseInt(form.newTeamMaxMembers, 10)
+      const parsedMaxMembers = Number.parseInt(createTeamDraft?.maxMembers ?? "", 10)
       if (!Number.isFinite(parsedMaxMembers) || parsedMaxMembers < 2 || parsedMaxMembers > 4) {
         setError("Max members must be a number between 2 and 4.")
         return
@@ -626,23 +633,14 @@ export function useApplicationForm() {
     }
 
     const nextTeamCode = mode === "join" ? form.teamCode.trim() : ""
-    const nextNewTeamName = mode === "create" ? form.newTeamName.trim() : ""
-    const nextNewTeamDescription = mode === "create" ? form.newTeamDescription.trim() : ""
-    const nextNewTeamMaxMembers = mode === "create" ? form.newTeamMaxMembers.trim() : ""
+    const nextNewTeamName = mode === "create" ? (createTeamDraft?.name ?? "").trim() : ""
+    const nextNewTeamDescription = mode === "create" ? (createTeamDraft?.description ?? "").trim() : ""
+    const nextNewTeamMaxMembers = mode === "create" ? (createTeamDraft?.maxMembers ?? "").trim() : ""
 
     if (mode !== "join" && form.teamCode !== "") {
       setForm((currentForm) => ({
         ...currentForm,
         teamCode: "",
-      }))
-    }
-
-    if (mode !== "create" && form.newTeamName !== "") {
-      setForm((currentForm) => ({
-        ...currentForm,
-        newTeamName: "",
-        newTeamDescription: "",
-        newTeamMaxMembers: "",
       }))
     }
 
@@ -656,18 +654,12 @@ export function useApplicationForm() {
     const normalizedCurrent = normalizeFormState({
       ...form,
       teamCode: nextTeamCode,
-      newTeamName: nextNewTeamName,
-      newTeamDescription: nextNewTeamDescription,
-      newTeamMaxMembers: nextNewTeamMaxMembers,
       teamSelectionMode: mode,
     })
 
     if (
       !hasChangesForFields(step3TeamFields) &&
       normalizedCurrent.teamCode === lastPersistedFormRef.current.teamCode &&
-      normalizedCurrent.newTeamName === lastPersistedFormRef.current.newTeamName &&
-      normalizedCurrent.newTeamDescription === lastPersistedFormRef.current.newTeamDescription &&
-      normalizedCurrent.newTeamMaxMembers === lastPersistedFormRef.current.newTeamMaxMembers &&
       normalizedCurrent.teamSelectionMode === lastPersistedFormRef.current.teamSelectionMode
     ) {
       return
@@ -723,9 +715,6 @@ export function useApplicationForm() {
           ...currentForm,
           teamSelectionMode: "create",
           teamCode: normalizedCurrent.teamCode,
-          newTeamName: nextNewTeamName,
-          newTeamDescription: nextNewTeamDescription,
-          newTeamMaxMembers: nextNewTeamMaxMembers,
         }))
       } catch {
         setIsFinalizingStep3(false)
@@ -736,9 +725,6 @@ export function useApplicationForm() {
 
     const synced = await syncApplicationDraft({
       teamCode: normalizedCurrent.teamCode,
-      newTeamName: nextNewTeamName,
-      newTeamDescription: nextNewTeamDescription,
-      newTeamMaxMembers: nextNewTeamMaxMembers,
       teamSelectionMode: mode,
     })
     setIsFinalizingStep3(false)

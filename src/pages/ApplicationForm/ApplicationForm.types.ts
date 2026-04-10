@@ -17,9 +17,12 @@ export type ApplicationFormState = {
   hackathonsAttended: string
   teamCode: string
   teamSelectionMode: "join" | "create" | "skip"
-  newTeamName: string
-  newTeamDescription: string
-  newTeamMaxMembers: string
+}
+
+export type CreateTeamDraft = {
+  name: string
+  description: string
+  maxMembers: string
 }
 
 export type Step2Field =
@@ -44,9 +47,6 @@ export const initialFormState: ApplicationFormState = {
   hackathonsAttended: "",
   teamCode: "",
   teamSelectionMode: "join",
-  newTeamName: "",
-  newTeamDescription: "",
-  newTeamMaxMembers: "",
 }
 
 export const steps = [
@@ -80,9 +80,6 @@ export const lockedAfterSubmitFields: Array<keyof ApplicationFormState> = [...st
 export const step3TeamFields: Array<keyof ApplicationFormState> = [
   "teamCode",
   "teamSelectionMode",
-  "newTeamName",
-  "newTeamDescription",
-  "newTeamMaxMembers",
 ]
 
 export const normalizeFormState = (state: ApplicationFormState): ApplicationFormState => {
@@ -112,14 +109,6 @@ export const normalizeFormState = (state: ApplicationFormState): ApplicationForm
           : state.hackathonsAttended.trim(),
     teamCode: state.teamCode.trim(),
     teamSelectionMode: state.teamSelectionMode,
-    newTeamName: state.newTeamName.trim(),
-    newTeamDescription: state.newTeamDescription.trim(),
-    newTeamMaxMembers:
-      state.newTeamMaxMembers.trim().length === 0
-        ? ""
-        : Number.isFinite(Number.parseInt(state.newTeamMaxMembers, 10))
-          ? String(Math.max(2, Math.min(4, Number.parseInt(state.newTeamMaxMembers, 10))))
-          : state.newTeamMaxMembers.trim(),
   }
 }
 
@@ -178,6 +167,6 @@ export type ApplicationFormContextType = {
   handleStepNavigation: (targetStep: 1 | 2 | 3) => Promise<void>
   handleSubmitStep2: () => Promise<void>
   handleSubmitApplicationAsTeamMember: () => Promise<void>
-  handleCompleteStep3: (mode: "join" | "create" | "skip") => Promise<void>
+  handleCompleteStep3: (mode: "join" | "create" | "skip", createTeamDraft?: CreateTeamDraft) => Promise<void>
   handleStep2FieldBlur: (field: Step2Field) => Promise<void>
 }

@@ -21,9 +21,6 @@ export type ApplicantRecord = {
   hackathonsAttended?: number
   teamCode?: string
   teamSelectionMode?: "join" | "create" | "skip"
-  newTeamName?: string
-  newTeamDescription?: string
-  newTeamMaxMembers?: number
 }
 
 export type ApplicantFormInput = {
@@ -41,9 +38,6 @@ export type ApplicantFormInput = {
   hackathonsAttended: string
   teamCode: string
   teamSelectionMode: "join" | "create" | "skip"
-  newTeamName: string
-  newTeamDescription: string
-  newTeamMaxMembers: string
 }
 
 export type ApplicantFormResponse = {
@@ -93,10 +87,6 @@ export const fetchApplicantFormData = async (
       application?.hackathonsAttended !== undefined ? String(application.hackathonsAttended) : "",
     teamCode: application?.teamCode ?? "",
     teamSelectionMode: application?.teamSelectionMode ?? "join",
-    newTeamName: application?.newTeamName ?? "",
-    newTeamDescription: application?.newTeamDescription ?? "",
-    newTeamMaxMembers:
-      application?.newTeamMaxMembers !== undefined ? String(application.newTeamMaxMembers) : "",
   }
 }
 
@@ -281,12 +271,6 @@ export const subscribeToApplicantFormData = (
           data.teamSelectionMode === "create" || data.teamSelectionMode === "skip"
             ? data.teamSelectionMode
             : "join",
-        newTeamName: readApplicantString(data.newTeamName),
-        newTeamDescription: readApplicantString(data.newTeamDescription),
-        newTeamMaxMembers:
-          readApplicantNumber(data.newTeamMaxMembers) !== null
-            ? String(readApplicantNumber(data.newTeamMaxMembers))
-            : "",
       })
     },
     (snapshotError) => {
@@ -375,18 +359,6 @@ export const syncApplicantDraft = async (
   if ("teamSelectionMode" in applicationDraft) {
     payload.teamSelectionMode = applicationDraft.teamSelectionMode ?? "join"
   }
-  if ("newTeamName" in applicationDraft) {
-    payload.newTeamName = (applicationDraft.newTeamName ?? "").trim()
-  }
-  if ("newTeamDescription" in applicationDraft) {
-    payload.newTeamDescription = (applicationDraft.newTeamDescription ?? "").trim()
-  }
-  if ("newTeamMaxMembers" in applicationDraft) {
-    const parsedNewTeamMaxMembers = Number.parseInt(applicationDraft.newTeamMaxMembers ?? "", 10)
-    payload.newTeamMaxMembers = Number.isFinite(parsedNewTeamMaxMembers)
-      ? String(Math.max(2, Math.min(4, parsedNewTeamMaxMembers)))
-      : ""
-  }
 
   logFirebaseFetch("api:write:start", {
     endpoint: "/api/applicants",
@@ -423,9 +395,6 @@ export const submitApplicantForm = async (uid: string, applicant: ApplicantFormI
     hackathonsAttended: applicant.hackathonsAttended.trim(),
     teamCode: applicant.teamCode.trim(),
     teamSelectionMode: applicant.teamSelectionMode,
-    newTeamName: applicant.newTeamName.trim(),
-    newTeamDescription: applicant.newTeamDescription.trim(),
-    newTeamMaxMembers: applicant.newTeamMaxMembers.trim(),
   }
 
   logFirebaseFetch("api:write:start", {

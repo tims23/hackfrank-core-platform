@@ -1,6 +1,7 @@
+import { useState } from "react"
 import { Button, Input, Textarea } from "@/components/ui"
 import { MyTeamCard } from "@/components/team/MyTeamCard"
-import type { ApplicationFormState } from "./ApplicationForm.types"
+import type { ApplicationFormState, CreateTeamDraft } from "./ApplicationForm.types"
 import { isNonEmpty } from "./ApplicationForm.types"
 import type { PendingTeamRecord } from "@/lib/teams"
 import type { ApplicantStatus } from "@/lib/applicants"
@@ -29,7 +30,7 @@ interface Step3Props {
   onPrevStep: () => void
   onProceedWithoutTeam: () => void
   onJoinTeam: () => void
-  onCreateTeam: () => void
+  onCreateTeam: (createTeamDraft: CreateTeamDraft) => void
   onSubmitAsTeamMember: () => void
   onSubmitAsTeamLeader: () => void
   onKickMember?: (memberId: string) => Promise<void>
@@ -74,15 +75,18 @@ export function ApplicationFormStep3({
   isUpdatingPendingMembers,
   isLeavingTeam,
 }: Step3Props) {
-  const parsedNewTeamMaxMembers = Number.parseInt(form.newTeamMaxMembers, 10)
+  const [createTeamName, setCreateTeamName] = useState("")
+  const [createTeamDescription, setCreateTeamDescription] = useState("")
+  const [createTeamMaxMembers, setCreateTeamMaxMembers] = useState("")
+  const parsedCreateTeamMaxMembers = Number.parseInt(createTeamMaxMembers, 10)
 
   return (
     <>
       {shouldShowTeamCard ? (
         <MyTeamCard
-          teamName={managedPendingTeam?.name || form.newTeamName}
-          description={managedPendingTeam?.description || form.newTeamDescription}
-          maxMembers={managedPendingTeam?.maxMembers || Math.max(2, Math.min(4, parsedNewTeamMaxMembers || 2))}
+          teamName={managedPendingTeam?.name || createTeamName}
+          description={managedPendingTeam?.description || createTeamDescription}
+          maxMembers={managedPendingTeam?.maxMembers || Math.max(2, Math.min(4, parsedCreateTeamMaxMembers || 2))}
           memberCount={managedPendingTeam?.memberIds.length || 1}
           memberIds={teamMemberIdsForCard}
           memberNames={teamMemberNamesForCard}
@@ -139,16 +143,16 @@ export function ApplicationFormStep3({
             <div className="space-y-3">
               <Input
                 type="text"
-                value={form.newTeamName}
-                onChange={(event) => onUpdateField("newTeamName", event.target.value)}
+                value={createTeamName}
+                onChange={(event) => setCreateTeamName(event.target.value)}
                 placeholder="Enter new team name"
                 className="w-full"
                 maxLength={80}
               />
 
               <Textarea
-                value={form.newTeamDescription}
-                onChange={(event) => onUpdateField("newTeamDescription", event.target.value)}
+                value={createTeamDescription}
+                onChange={(event) => setCreateTeamDescription(event.target.value)}
                 placeholder="Describe your team focus"
                 className="w-full"
                 maxLength={600}
@@ -158,8 +162,8 @@ export function ApplicationFormStep3({
                 type="number"
                 min={2}
                 max={4}
-                value={form.newTeamMaxMembers}
-                onChange={(event) => onUpdateField("newTeamMaxMembers", event.target.value)}
+                value={createTeamMaxMembers}
+                onChange={(event) => setCreateTeamMaxMembers(event.target.value)}
                 placeholder="Max members (2-4)"
                 className="w-full"
               />
@@ -204,13 +208,21 @@ export function ApplicationFormStep3({
                     isFinalizingStep3 ||
                     (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
                     (form.teamSelectionMode === "create" &&
-                      (!isNonEmpty(form.newTeamName) ||
-                        !isNonEmpty(form.newTeamDescription) ||
-                        !Number.isFinite(Number.parseInt(form.newTeamMaxMembers, 10)) ||
-                        Number.parseInt(form.newTeamMaxMembers, 10) < 2 ||
-                        Number.parseInt(form.newTeamMaxMembers, 10) > 4))
+                      (!isNonEmpty(createTeamName) ||
+                        !isNonEmpty(createTeamDescription) ||
+                        !Number.isFinite(parsedCreateTeamMaxMembers) ||
+                        parsedCreateTeamMaxMembers < 2 ||
+                        parsedCreateTeamMaxMembers > 4))
                   }
-                  onClick={form.teamSelectionMode === "create" ? onCreateTeam : onJoinTeam}
+                  onClick={
+                    form.teamSelectionMode === "create"
+                      ? () => onCreateTeam({
+                        name: createTeamName,
+                        description: createTeamDescription,
+                        maxMembers: createTeamMaxMembers,
+                      })
+                      : onJoinTeam
+                  }
                 >
                   {isFinalizingStep3
                     ? "Saving..."
