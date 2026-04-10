@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot } from "firebase/firestore"
+import { doc, onSnapshot } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 import { apiCall, apiGet } from "@/lib/api"
 
@@ -102,7 +102,22 @@ const readApplicantNumber = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null
 
 const getParticipantApplicationDocRef = (uid: string) =>
-  doc(firestoreDb, "participants", uid, "private", "application")
+  doc(firestoreDb, "participants", uid, "details", "application")
+
+type SharedParticipantProfileResponse = {
+  success: boolean
+  profile: {
+    uid: string
+    prename: string
+    surname: string
+    status: ApplicantStatus
+  }
+}
+
+type ApplicantProfileData = {
+  prename?: string
+  surname?: string
+}
 
 const chunkIds = (ids: string[], chunkSize: number): string[][] => {
   const chunks: string[][] = []
@@ -131,46 +146,55 @@ export const fetchApplicantProfilesByIds = async (
   const statusesById: Record<string, ApplicantStatus> = {}
 
   for (const idsChunk of idChunks) {
-      logFirebaseFetch("getDoc:start", {
-        collection: "participants/details",
+    logFirebaseFetch("api:read:start", {
+      endpoint: "/api/participants",
       idCount: idsChunk.length,
       mode: "member-name-lookup",
     })
 
     const profileResults = await Promise.allSettled(
       idsChunk.map(async (applicantId) => {
-          logFirebaseFetch("getDoc:start", {
-            collection: "participants/details",
+        logFirebaseFetch("api:read:start", {
+          endpoint: "/api/participants",
           id: applicantId,
           mode: "member-name-lookup",
         })
 
-        const applicationSnapshot = await getDoc(getParticipantApplicationDocRef(applicantId))
+        const result = await apiGet<SharedParticipantProfileResponse>(
+          `/api/participants?uid=${encodeURIComponent(applicantId)}`,
+        )
 
-          logFirebaseFetch("getDoc:success", {
-            collection: "participants/details",
+        logFirebaseFetch("api:read:success", {
+          endpoint: "/api/participants",
           id: applicantId,
-          exists: applicationSnapshot.exists(),
-          fromCache: applicationSnapshot.metadata.fromCache,
+          hasProfile: Boolean(result.profile),
           mode: "member-name-lookup",
         })
 
-        if (!applicationSnapshot.exists()) {
-          return null
-        }
+        const profileData: ApplicantProfileData | undefined = result.profile
+          ? {
+              prename: result.profile.prename,
+              surname: result.profile.surname,
+            }
+          : undefined
+        const applicationData: Partial<ApplicantRecord> | undefined = result.profile
+          ? {
+              status: result.profile.status,
+            }
+          : undefined
 
-        const data = applicationSnapshot.data() as Partial<ApplicantRecord>
         return {
           applicantId,
-          data,
+          profileData,
+          applicationData,
         }
       }),
     )
 
     for (const profileResult of profileResults) {
       if (profileResult.status === "rejected") {
-          logFirebaseFetch("getDoc:error", {
-            collection: "participants/details",
+        logFirebaseFetch("getDoc:error", {
+          collection: "participants/details",
           mode: "member-name-lookup",
           message: profileResult.reason instanceof Error ? profileResult.reason.message : String(profileResult.reason),
         })
@@ -182,11 +206,12 @@ export const fetchApplicantProfilesByIds = async (
         continue
       }
 
-      const { applicantId, data } = value
-      const prename = readApplicantString(data.prename).trim()
-      const surname = readApplicantString(data.surname).trim()
+      const { applicantId, profileData, applicationData } = value
+      const prename = readApplicantString(profileData?.prename ?? applicationData?.prename).trim()
+      const surname = readApplicantString(profileData?.surname ?? applicationData?.surname).trim()
       const fullName = `${prename} ${surname}`.trim()
-      const applicantStatus: ApplicantStatus = data.status === "submitted" ? "submitted" : "started"
+      const applicantStatus: ApplicantStatus =
+        applicationData?.status === "submitted" ? "submitted" : "started"
 
       if (fullName.length > 0) {
         namesById[applicantId] = fullName
@@ -195,8 +220,8 @@ export const fetchApplicantProfilesByIds = async (
       statusesById[applicantId] = applicantStatus
     }
 
-      logFirebaseFetch("getDoc:success", {
-        collection: "participants/details",
+    logFirebaseFetch("api:read:success", {
+      endpoint: "/api/participants",
       idCount: idsChunk.length,
       mode: "member-name-lookup",
     })

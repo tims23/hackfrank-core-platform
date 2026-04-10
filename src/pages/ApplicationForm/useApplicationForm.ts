@@ -92,12 +92,19 @@ export function useApplicationForm() {
     !!managedPendingTeam &&
     !!activeUserId &&
     managedPendingTeam.memberIds.includes(activeUserId)
+  const isManagedTeamPendingMember =
+    !!managedPendingTeam &&
+    !!activeUserId &&
+    managedPendingTeam.pendingMemberIds.includes(activeUserId)
   const isManagedTeamLeader =
     !!managedPendingTeam &&
     !!activeUserId &&
     managedPendingTeam.leaderId === activeUserId
-  const shouldShowTeamCard = hasCreatedPendingTeam || isManagedTeamMember
-  const canLeaveManagedTeam = isManagedTeamMember && !isManagedTeamLeader
+  const shouldShowTeamCard = hasCreatedPendingTeam || isManagedTeamMember || isManagedTeamPendingMember
+  const canLeaveManagedTeam =
+    (isManagedTeamMember || isManagedTeamPendingMember) &&
+    !isManagedTeamLeader &&
+    !isApplicationSubmitted
   const shouldShowJoinedMemberSubmitAction =
     (isManagedTeamMember || isManagedTeamLeader) && !isApplicationSubmitted
   const teamMemberIdsForCard = managedPendingTeam?.memberIds ?? (activeUserId ? [activeUserId] : [])
@@ -600,6 +607,16 @@ export function useApplicationForm() {
 
     if (!submitted) {
       setError("Could not submit application. Please try again.")
+      return
+    }
+
+    setApplicantStatus("submitted")
+
+    if (activeUserId) {
+      setApplicantStatusesById((currentStatuses) => ({
+        ...currentStatuses,
+        [activeUserId]: "submitted",
+      }))
     }
   }
 
@@ -766,6 +783,7 @@ export function useApplicationForm() {
     hasTeamCode,
     activeUserId,
     isManagedTeamMember,
+    isManagedTeamPendingMember,
     isManagedTeamLeader,
     shouldShowTeamCard,
     canLeaveManagedTeam,

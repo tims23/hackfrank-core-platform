@@ -18,6 +18,7 @@ interface Step3Props {
   canLeaveManagedTeam: boolean
   shouldShowJoinedMemberSubmitAction: boolean
   canSubmitApplication: boolean
+  isManagedTeamPendingMember: boolean
   
   managedPendingTeam: PendingTeamRecord | null
   activeUserId: string
@@ -53,6 +54,7 @@ export function ApplicationFormStep3({
   canLeaveManagedTeam,
   shouldShowJoinedMemberSubmitAction,
   canSubmitApplication,
+  isManagedTeamPendingMember,
   
   managedPendingTeam,
   activeUserId,
@@ -105,6 +107,7 @@ export function ApplicationFormStep3({
           isUpdatingPendingMembers={isUpdatingPendingMembers}
           onLeaveTeam={canLeaveManagedTeam ? onLeaveTeam : undefined}
           isLeavingTeam={isLeavingTeam}
+          showPendingApprovalRemark={isManagedTeamPendingMember}
         />
       ) : (
         <div>
@@ -190,47 +193,49 @@ export function ApplicationFormStep3({
                 {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Application"}
               </Button>
             ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={isFinalizingStep3 || hasCreatedPendingTeam}
-                  onClick={onProceedWithoutTeam}
-                >
-                  {isFinalizingStep3 ? "Saving..." : "Proceed Without Team"}
-                </Button>
-                <Button
-                  type="button"
-                  className="w-full"
-                  disabled={
-                    hasCreatedPendingTeam ||
-                    isFinalizingStep3 ||
-                    (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
-                    (form.teamSelectionMode === "create" &&
-                      (!isNonEmpty(createTeamName) ||
-                        !isNonEmpty(createTeamDescription) ||
-                        !Number.isFinite(parsedCreateTeamMaxMembers) ||
-                        parsedCreateTeamMaxMembers < 2 ||
-                        parsedCreateTeamMaxMembers > 4))
-                  }
-                  onClick={
-                    form.teamSelectionMode === "create"
-                      ? () => onCreateTeam({
-                        name: createTeamName,
-                        description: createTeamDescription,
-                        maxMembers: createTeamMaxMembers,
-                      })
-                      : onJoinTeam
-                  }
-                >
-                  {isFinalizingStep3
-                    ? "Saving..."
-                    : form.teamSelectionMode === "create"
-                      ? "Create New Team"
-                      : "Join Team with Code"}
-                </Button>
-              </>
+              !isManagedTeamPendingMember && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={isFinalizingStep3 || hasCreatedPendingTeam}
+                    onClick={onProceedWithoutTeam}
+                  >
+                    {isFinalizingStep3 ? "Saving..." : "Proceed Without Team"}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={
+                      hasCreatedPendingTeam ||
+                      isFinalizingStep3 ||
+                      (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
+                      (form.teamSelectionMode === "create" &&
+                        (!isNonEmpty(createTeamName) ||
+                          !isNonEmpty(createTeamDescription) ||
+                          !Number.isFinite(parsedCreateTeamMaxMembers) ||
+                          parsedCreateTeamMaxMembers < 2 ||
+                          parsedCreateTeamMaxMembers > 4))
+                    }
+                    onClick={
+                      form.teamSelectionMode === "create"
+                        ? () => onCreateTeam({
+                          name: createTeamName,
+                          description: createTeamDescription,
+                          maxMembers: createTeamMaxMembers,
+                        })
+                        : onJoinTeam
+                    }
+                  >
+                    {isFinalizingStep3
+                      ? "Saving..."
+                      : form.teamSelectionMode === "create"
+                        ? "Create New Team"
+                        : "Join Team with Code"}
+                  </Button>
+                </>
+              )
             )}
           </>
         )}

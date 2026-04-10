@@ -7,6 +7,7 @@ import {
   declinePendingMember,
   leavePendingTeam,
   kickPendingTeamMember,
+  SubmittedApplicationLeaveError,
 } from "./lib/teams.ts"
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: string) => {
@@ -110,7 +111,17 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         }
 
         console.log("[api/teams] Leaving pending team", { uid, teamDocId })
-        await leavePendingTeam(teamDocId, uid)
+        try {
+          await leavePendingTeam(teamDocId, uid)
+        } catch (error) {
+          if (error instanceof SubmittedApplicationLeaveError) {
+            console.warn("[api/teams] Leave blocked for submitted member", { uid, teamDocId })
+            res.status(403).json({ error: error.message })
+            return
+          }
+
+          throw error
+        }
         console.log("[api/teams] Left pending team", { uid, teamDocId })
         res.status(200).json({ success: true })
         return

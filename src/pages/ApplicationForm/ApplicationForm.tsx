@@ -110,6 +110,7 @@ export function ApplicationForm() {
                 canLeaveManagedTeam={form.canLeaveManagedTeam}
                 shouldShowJoinedMemberSubmitAction={form.shouldShowJoinedMemberSubmitAction}
                 canSubmitApplication={form.canSubmitApplication}
+                isManagedTeamPendingMember={form.isManagedTeamPendingMember}
                 
                 managedPendingTeam={form.managedPendingTeam}
                 activeUserId={form.activeUserId}

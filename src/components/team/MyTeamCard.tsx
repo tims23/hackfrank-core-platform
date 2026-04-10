@@ -24,6 +24,7 @@ type MyTeamCardProps = {
   isUpdatingPendingMembers?: boolean
   onLeaveTeam?: () => void | Promise<void>
   isLeavingTeam?: boolean
+  showPendingApprovalRemark?: boolean
 }
 
 export function MyTeamCard({
@@ -49,6 +50,7 @@ export function MyTeamCard({
   isUpdatingPendingMembers = false,
   onLeaveTeam,
   isLeavingTeam = false,
+  showPendingApprovalRemark = false,
 }: MyTeamCardProps) {
   return (
     <div className="space-y-4">
@@ -68,7 +70,13 @@ export function MyTeamCard({
               onClick={() => onLeaveTeam()}
               className="px-3 py-1.5 text-xs rounded border border-red-400/40 text-red-300 hover:text-red-200 hover:border-red-300/60 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLeavingTeam ? "Leaving..." : "Leave Team"}
+              {isLeavingTeam
+                ? showPendingApprovalRemark
+                  ? "Canceling..."
+                  : "Leaving..."
+                : showPendingApprovalRemark
+                  ? "Cancel Join Request"
+                  : "Leave Team"}
             </button>
           </div>
         )}
@@ -76,6 +84,12 @@ export function MyTeamCard({
         <div className="mb-4">
           <h4 className="text-xl font-semibold text-foreground mb-2">{teamName}</h4>
           <p className="text-sm text-muted-foreground mb-3">{description}</p>
+
+          {showPendingApprovalRemark && (
+            <p className="text-sm text-amber-300 mb-3 border border-amber-400/30 bg-amber-400/10 rounded-md px-3 py-2">
+              Your join request is pending. You are waiting for approval by the team leader.
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center gap-3 text-sm">
             {caseLabel && (
@@ -105,7 +119,7 @@ export function MyTeamCard({
             <Users className="w-4 h-4" />
             <span>
               {memberCount} {memberCount === 1 ? "member" : "members"} currently in team
-              {memberCount > 0 ? " (including you)" : ""}
+              {memberCount > 0 && !showPendingApprovalRemark ? " (including you)" : ""}
             </span>
           </div>
 
@@ -114,6 +128,7 @@ export function MyTeamCard({
               {memberNames.map((memberName, index) => {
                 const memberId = memberIds[index]
                 const memberStatus = memberStatuses[index] ?? "unknown"
+                const isCurrentUserRow = !!currentUserId && memberId === currentUserId
                 const isLeaderRow = !!leaderId && memberId === leaderId
                 const canKick =
                   !!onKickTeamMember &&
@@ -129,7 +144,10 @@ export function MyTeamCard({
                     className="flex items-center justify-between gap-2 rounded-md border border-border/30 px-3 py-2"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm text-foreground truncate">{memberName}</span>
+                      <span className="text-sm text-foreground truncate">
+                        {memberName}
+                        {isCurrentUserRow ? " (you)" : ""}
+                      </span>
                       <Badge
                         className={
                           memberStatus === "submitted"
