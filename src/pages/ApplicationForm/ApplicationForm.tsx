@@ -111,6 +111,7 @@ export function ApplicationForm() {
                 shouldShowJoinedMemberSubmitAction={form.shouldShowJoinedMemberSubmitAction}
                 canSubmitApplication={form.canSubmitApplication}
                 isManagedTeamPendingMember={form.isManagedTeamPendingMember}
+                hasPendingTeamMembers={form.hasPendingTeamMembers}
                 
                 managedPendingTeam={form.managedPendingTeam}
                 activeUserId={form.activeUserId}
@@ -125,8 +126,12 @@ export function ApplicationForm() {
                 onJoinTeam={() => form.handleCompleteStep3("join")}
                 onCreateTeam={(createTeamDraft) => form.handleCompleteStep3("create", createTeamDraft)}
                 onSubmitAsTeamMember={form.handleSubmitApplicationAsTeamMember}
-                onSubmitAsTeamLeader={() => form.handleCompleteStep3("join")}
-                onKickMember={form.handleKickTeamMember}
+                onSubmitAsTeamLeader={form.handleSubmitApplicationAsTeamLeader}
+                onKickMember={
+                  form.isManagedTeamLeader && form.managedPendingTeam?.status === "INITIAL"
+                    ? form.handleKickTeamMember
+                    : undefined
+                }
                 onApproveMember={form.handleApprovePendingMember}
                 onDeclineMember={form.handleDeclinePendingMember}
                 onLeaveTeam={form.handleLeaveTeam}

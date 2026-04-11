@@ -7,7 +7,9 @@ import {
   declinePendingMember,
   leavePendingTeam,
   kickPendingTeamMember,
+  submitPendingTeamApplication,
   SubmittedApplicationLeaveError,
+  SubmittedTeamMutationError,
 } from "./lib/teams.ts"
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: string) => {
@@ -141,8 +143,34 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         }
 
         console.log("[api/teams] Kicking team member", { uid, teamDocId, memberId })
-        await kickPendingTeamMember(teamDocId, memberId)
+        try {
+          await kickPendingTeamMember(teamDocId, memberId)
+        } catch (error) {
+          if (error instanceof SubmittedTeamMutationError) {
+            console.warn("[api/teams] Kick blocked for submitted team", { uid, teamDocId, memberId })
+            res.status(403).json({ error: error.message })
+            return
+          }
+
+          throw error
+        }
         console.log("[api/teams] Team member kicked", { uid, teamDocId, memberId })
+        res.status(200).json({ success: true })
+        return
+      }
+
+      case "submit-application": {
+        const { teamDocId } = data as { teamDocId: string }
+
+        if (!teamDocId) {
+          console.warn("[api/teams] submit-application validation failed: missing teamDocId", { uid })
+          res.status(400).json({ error: "Team doc ID required" })
+          return
+        }
+
+        console.log("[api/teams] Submitting team application", { uid, teamDocId })
+        await submitPendingTeamApplication(teamDocId, uid)
+        console.log("[api/teams] Team application submitted", { uid, teamDocId })
         res.status(200).json({ success: true })
         return
       }

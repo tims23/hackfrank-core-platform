@@ -7,7 +7,7 @@ import {
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 import { apiCall } from "@/lib/api"
 
-export type TeamStatus = "APPLICATION_PENDING" | "ACTIVE"
+export type TeamStatus = "INITIAL" | "APPLICATION_SUBMITTED"
 
 export type TeamRecord = {
   id: number
@@ -75,7 +75,7 @@ const normalizeTeam = (
       : typeof data.leaderId === "number" && Number.isFinite(data.leaderId)
         ? String(data.leaderId)
         : null,
-  status: data.status === "APPLICATION_PENDING" ? "APPLICATION_PENDING" : "ACTIVE",
+  status: data.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED",
   teamCode: typeof data.teamCode === "string" ? data.teamCode.trim() : undefined,
   pendingMemberIds: Array.isArray(data.pendingMemberIds)
     ? data.pendingMemberIds
@@ -179,7 +179,6 @@ export const subscribeToPendingTeamByCode = (
   const teamsQuery = query(
     collection(firestoreDb, "teams"),
     where("teamCode", "==", normalizedTeamCode),
-    where("status", "==", "APPLICATION_PENDING"),
   )
 
   return onSnapshot(
@@ -210,7 +209,7 @@ export const subscribeToPendingTeamByCode = (
         maxMembers: normalizedTeam.maxMembers,
         memberIds: normalizedTeam.memberIds,
         pendingMemberIds: normalizedTeam.pendingMemberIds ?? [],
-        status: normalizedTeam.status ?? "APPLICATION_PENDING",
+        status: normalizedTeam.status ?? "INITIAL",
         teamCode: normalizedTeam.teamCode,
         leaderId: normalizedTeam.leaderId,
       })
@@ -337,6 +336,33 @@ export const kickPendingTeamMember = async (teamDocId: string, memberId: string)
     logFirebaseFetch("api:write:error", {
       endpoint: "/api/teams",
       action: "kick",
+      message: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
+}
+
+export const submitPendingTeamApplication = async (teamDocId: string) => {
+  logFirebaseFetch("api:write:start", {
+    endpoint: "/api/teams",
+    action: "submit-application",
+    teamDocId,
+  })
+
+  try {
+    await apiCall<{ success: boolean }>("/api/teams", "submit-application", {
+      teamDocId,
+    })
+
+    logFirebaseFetch("api:write:success", {
+      endpoint: "/api/teams",
+      action: "submit-application",
+      teamDocId,
+    })
+  } catch (error) {
+    logFirebaseFetch("api:write:error", {
+      endpoint: "/api/teams",
+      action: "submit-application",
       message: error instanceof Error ? error.message : String(error),
     })
     throw error

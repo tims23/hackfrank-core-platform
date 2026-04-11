@@ -19,6 +19,7 @@ interface Step3Props {
   shouldShowJoinedMemberSubmitAction: boolean
   canSubmitApplication: boolean
   isManagedTeamPendingMember: boolean
+  hasPendingTeamMembers: boolean
   
   managedPendingTeam: PendingTeamRecord | null
   activeUserId: string
@@ -55,6 +56,7 @@ export function ApplicationFormStep3({
   shouldShowJoinedMemberSubmitAction,
   canSubmitApplication,
   isManagedTeamPendingMember,
+  hasPendingTeamMembers,
   
   managedPendingTeam,
   activeUserId,
@@ -95,7 +97,7 @@ export function ApplicationFormStep3({
           memberStatuses={teamMemberStatusesForCard}
           leaderId={managedPendingTeam?.leaderId ?? undefined}
           currentUserId={activeUserId}
-          status={managedPendingTeam?.status || "APPLICATION_PENDING"}
+          status={managedPendingTeam?.status || "INITIAL"}
           teamCode={managedPendingTeam?.teamCode || form.teamCode}
           showPendingMembers={isManagedTeamLeader || (hasCreatedPendingTeam && !managedPendingTeam)}
           pendingMemberIds={managedPendingTeam?.pendingMemberIds || []}
@@ -176,6 +178,11 @@ export function ApplicationFormStep3({
       )}
 
       {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+      {!isApplicationSubmitted && isManagedTeamLeader && hasPendingTeamMembers && (
+        <p className="text-sm text-amber-300 text-center">
+          Team submission is blocked while members are still pending. Please approve or decline all pending members.
+        </p>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Button type="button" variant="outline" className="w-full" onClick={onPrevStep}>
           Back

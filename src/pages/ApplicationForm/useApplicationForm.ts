@@ -14,6 +14,7 @@ import {
   joinPendingTeamByCode,
   kickPendingTeamMember,
   leavePendingTeam,
+  submitPendingTeamApplication,
   subscribeToPendingTeamByCode,
   type PendingTeamRecord,
 } from "@/lib/teams"
@@ -108,12 +109,15 @@ export function useApplicationForm() {
   const shouldShowJoinedMemberSubmitAction =
     (isManagedTeamMember || isManagedTeamLeader) && !isApplicationSubmitted
   const teamMemberIdsForCard = managedPendingTeam?.memberIds ?? (activeUserId ? [activeUserId] : [])
+  const pendingMemberIdsForCard = managedPendingTeam?.pendingMemberIds ?? []
+  const hasPendingTeamMembers = pendingMemberIdsForCard.length > 0
   const hasMultipleTeamMembers = teamMemberIdsForCard.length > 1
   const allOtherTeamMembersSubmitted = teamMemberIdsForCard
     .filter((memberId) => memberId !== activeUserId)
     .every((memberId) => applicantStatusesById[memberId] === "submitted")
-  const canSubmitApplication = isManagedTeamLeader ? (hasMultipleTeamMembers && allOtherTeamMembersSubmitted) : true
-  const pendingMemberIdsForCard = managedPendingTeam?.pendingMemberIds ?? []
+  const canSubmitApplication = isManagedTeamLeader
+    ? hasMultipleTeamMembers && allOtherTeamMembersSubmitted && !hasPendingTeamMembers
+    : true
   const fallbackOwnName = `${form.prename.trim()} ${form.surname.trim()}`.trim()
   
   const resolveMemberName = (memberId: string): string => {
@@ -620,6 +624,52 @@ export function useApplicationForm() {
     }
   }
 
+  const handleSubmitApplicationAsTeamLeader = async () => {
+    if (!managedPendingTeam || !activeUserId || !isManagedTeamLeader) {
+      setError("Could not determine your managed team.")
+      return
+    }
+
+    if (!canSubmitApplication) {
+      if (hasPendingTeamMembers) {
+        setError("Please approve or decline all pending team members before submitting the team application.")
+      } else {
+        setError("All other team members must submit before you can submit the team application.")
+      }
+      return
+    }
+
+    setError("")
+    setIsSubmitting(true)
+
+    const applicantSubmitted = await submitApplication(form)
+    if (!applicantSubmitted) {
+      setIsSubmitting(false)
+      setError("Could not submit your application. Please try again.")
+      return
+    }
+
+    try {
+      await submitPendingTeamApplication(managedPendingTeam.docId)
+    } catch {
+      setIsSubmitting(false)
+      setError("Your application was submitted, but team submission failed. Please try again.")
+      setApplicantStatus("submitted")
+      setApplicantStatusesById((currentStatuses) => ({
+        ...currentStatuses,
+        [activeUserId]: "submitted",
+      }))
+      return
+    }
+
+    setIsSubmitting(false)
+    setApplicantStatus("submitted")
+    setApplicantStatusesById((currentStatuses) => ({
+      ...currentStatuses,
+      [activeUserId]: "submitted",
+    }))
+  }
+
   const handleCompleteStep3 = async (
     mode: "join" | "create" | "skip",
     createTeamDraft?: CreateTeamDraft,
@@ -793,6 +843,7 @@ export function useApplicationForm() {
     allOtherTeamMembersSubmitted,
     canSubmitApplication,
     pendingMemberIdsForCard,
+    hasPendingTeamMembers,
     teamMemberNamesForCard,
     teamMemberStatusesForCard,
     pendingMemberNamesForCard,
@@ -810,6 +861,7 @@ export function useApplicationForm() {
     handleStepNavigation,
     handleSubmitStep2,
     handleSubmitApplicationAsTeamMember,
+    handleSubmitApplicationAsTeamLeader,
     handleCompleteStep3,
     handleStep2FieldBlur,
   }
