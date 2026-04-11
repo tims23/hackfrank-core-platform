@@ -1,6 +1,8 @@
 import type { ApplicantStatus } from "@/lib/applicants"
 import type { Participant } from "@/lib/participants"
 import type { PendingTeamRecord } from "@/lib/teams"
+import type { TeamSelectionMode } from "../../../shared/types"
+import { DEFAULT_TEAM_SELECTION_MODE } from "../../../shared/types"
 
 export type ApplicationFormState = {
   prename: string
@@ -16,7 +18,7 @@ export type ApplicationFormState = {
   generalSkills: string
   hackathonsAttended: string
   teamCode: string
-  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
+  teamSelectionMode: TeamSelectionMode
 }
 
 export type CreateTeamDraft = {
@@ -45,7 +47,7 @@ export const initialFormState: ApplicationFormState = {
   generalSkills: "",
   hackathonsAttended: "",
   teamCode: "",
-  teamSelectionMode: "join",
+  teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
 }
 
 export const steps = [
@@ -163,6 +165,6 @@ export type ApplicationFormContextType = {
   handleSubmitStep2: () => Promise<void>
   handleSubmitApplicationAsTeamMember: () => Promise<void>
   handleProceedWithoutTeam: () => Promise<void>
-  handleCompleteStep3: (mode: "join" | "create" | "INDIVIDUAL", createTeamDraft?: CreateTeamDraft) => Promise<boolean>
+  handleCompleteStep3: (mode: TeamSelectionMode, createTeamDraft?: CreateTeamDraft) => Promise<boolean>
   handleStep2FieldBlur: (field: Step2Field) => Promise<void>
 }

@@ -1,39 +1,26 @@
 import { db } from "./firebase-admin.ts"
 import { FieldValue } from "firebase-admin/firestore"
+import type {
+  ApplicantFormInput,
+  ApplicantProfileRecord,
+  ApplicantRecord,
+  ApplicantStatus,
+} from "../../shared/types.ts"
+import {
+  APPLICANT_STATUS_STARTED,
+  APPLICANT_STATUS_SUBMITTED,
+  DEFAULT_TEAM_SELECTION_MODE,
+  normalizeApplicantStatus,
+  normalizeTeamSelectionMode,
+} from "../../shared/types.ts"
 
-export type ApplicantStatus = "started" | "submitted"
-
-export type ApplicantFormInput = {
-  prename: string
-  surname: string
-  birthday: string
-  gender: string
-  phoneNumber: string
-  nationality: string
-  university: string
-  currentCv: string
-  motivation: string
-  programmingSkillLevel: string
-  generalSkills: string
-  hackathonsAttended: string
-  teamCode: string
-  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
-}
-
-export type ApplicantRecord = ApplicantFormInput & {
-  uid: string
-  status: ApplicantStatus
-  skills?: string[]
-}
-
-export type ApplicantProfileRecord = {
-  prename?: string
-  surname?: string
-  nationality?: string
-  university?: string
-  generalSkills?: string
-  skills?: string[]
-}
+export type {
+  ApplicantFormInput,
+  ApplicantProfileRecord,
+  ApplicantRecord,
+  ApplicantStatus,
+  TeamSelectionMode,
+} from "../../shared/types.ts"
 
 const getParticipantApplicationDocRef = (uid: string) =>
   db.collection("participants").doc(uid).collection("details").doc("application")
@@ -65,18 +52,6 @@ const parseHackathonsAttended = (value: unknown): string => {
   return ""
 }
 
-const normalizeTeamSelectionMode = (value: unknown): "join" | "create" | "INDIVIDUAL" => {
-  if (value === "create") {
-    return "create"
-  }
-
-  if (value === "INDIVIDUAL") {
-    return "INDIVIDUAL"
-  }
-
-  return "join"
-}
-
 export async function fetchApplicantFormData(uid: string): Promise<ApplicantRecord | null> {
   console.log("[api/lib/applicants] fetchApplicantFormData start", { uid })
 
@@ -92,7 +67,7 @@ export async function fetchApplicantFormData(uid: string): Promise<ApplicantReco
 
   const applicationData = applicationSnapshot.data() as Partial<ApplicantRecord> | undefined
   const profileData = profileSnapshot.data() as ApplicantProfileRecord | undefined
-  const status: ApplicantStatus = applicationData?.status === "submitted" ? "submitted" : "started"
+  const status: ApplicantStatus = normalizeApplicantStatus(applicationData?.status)
   const skillsFromProfile = parseSkills(profileData?.skills)
   const skillsFromApplication = parseSkills(applicationData?.skills)
   const skills = skillsFromProfile.length > 0 ? skillsFromProfile : skillsFromApplication
@@ -179,7 +154,7 @@ export async function submitApplicantForm(
       hackathonsAttended: Number.isFinite(hackathonsAttended) ? hackathonsAttended : 0,
       teamCode: applicant.teamCode,
       teamSelectionMode,
-      status: "submitted",
+      status: APPLICANT_STATUS_SUBMITTED,
       submittedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true }),
@@ -265,7 +240,7 @@ export async function createApplicant(uid: string): Promise<void> {
   await Promise.all([
     getParticipantApplicationDocRef(uid).set({
       userId: uid,
-      status: "started",
+      status: APPLICANT_STATUS_STARTED,
       birthday: "",
       gender: "",
       phoneNumber: "",
@@ -274,7 +249,7 @@ export async function createApplicant(uid: string): Promise<void> {
       programmingSkillLevel: "",
       hackathonsAttended: "",
       teamCode: "",
-      teamSelectionMode: "join",
+      teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true }),

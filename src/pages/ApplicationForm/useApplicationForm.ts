@@ -6,6 +6,14 @@ import {
   fetchApplicantProfilesByIds,
   type ApplicantStatus,
 } from "@/lib/applicants"
+import {
+  APPLICANT_STATUS_STARTED,
+  APPLICANT_STATUS_SUBMITTED,
+  TEAM_SELECTION_MODE_CREATE,
+  TEAM_SELECTION_MODE_INDIVIDUAL,
+  TEAM_SELECTION_MODE_JOIN,
+  type TeamSelectionMode,
+} from "../../../shared/types"
 import { subscribeToParticipants, type Participant } from "@/lib/participants"
 import {
   createPendingTeamFromApplication,
@@ -39,7 +47,7 @@ export function useApplicationForm() {
   const [isFinalizingStep3, setIsFinalizingStep3] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [applicantStatus, setApplicantStatus] = useState<ApplicantStatus>("started")
+  const [applicantStatus, setApplicantStatus] = useState<ApplicantStatus>(APPLICANT_STATUS_STARTED)
   const [isFormDataLoading, setIsFormDataLoading] = useState(true)
   const [managedPendingTeam, setManagedPendingTeam] = useState<PendingTeamRecord | null>(null)
   const [participantsById, setParticipantsById] = useState<Record<string, Participant>>({})
@@ -70,7 +78,7 @@ export function useApplicationForm() {
     isNonEmpty(form.university)
 
   const parsedHackathonsAttended = Number.parseInt(form.hackathonsAttended, 10)
-  const isApplicationSubmitted = applicantStatus === "submitted"
+  const isApplicationSubmitted = applicantStatus === APPLICANT_STATUS_SUBMITTED
   const hasValidHackathonsAttended =
     Number.isFinite(parsedHackathonsAttended) && parsedHackathonsAttended >= 0
 
@@ -83,7 +91,7 @@ export function useApplicationForm() {
     hasValidHackathonsAttended
 
   const hasCreatedPendingTeam =
-    form.teamSelectionMode === "create" &&
+    form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE &&
     isNonEmpty(form.teamCode)
   const hasTeamCode = isNonEmpty(form.teamCode)
   const activeUserId = user?.uid ?? ""
@@ -103,7 +111,7 @@ export function useApplicationForm() {
   const hasMultipleTeamMembers = teamMemberIdsForCard.length > 1
   const allOtherTeamMembersSubmitted = teamMemberIdsForCard
     .filter((memberId) => memberId !== activeUserId)
-    .every((memberId) => applicantStatusesById[memberId] === "submitted")
+    .every((memberId) => applicantStatusesById[memberId] === APPLICANT_STATUS_SUBMITTED)
   const canSubmitApplication = isManagedTeamLeader
     ? hasMultipleTeamMembers && allOtherTeamMembersSubmitted
     : true
@@ -338,7 +346,7 @@ export function useApplicationForm() {
 
       const clearedStep3Values = {
         teamCode: "",
-        teamSelectionMode: "join" as const,
+        teamSelectionMode: TEAM_SELECTION_MODE_JOIN,
       }
 
       setForm((currentForm) => ({
@@ -567,12 +575,12 @@ export function useApplicationForm() {
       return
     }
 
-    setApplicantStatus("submitted")
+    setApplicantStatus(APPLICANT_STATUS_SUBMITTED)
 
     if (activeUserId) {
       setApplicantStatusesById((currentStatuses) => ({
         ...currentStatuses,
-        [activeUserId]: "submitted",
+        [activeUserId]: APPLICANT_STATUS_SUBMITTED,
       }))
     }
   }
@@ -607,48 +615,48 @@ export function useApplicationForm() {
     } catch {
       setIsSubmitting(false)
       setError("Your application was submitted, but team submission failed. Please try again.")
-      setApplicantStatus("submitted")
+      setApplicantStatus(APPLICANT_STATUS_SUBMITTED)
       setApplicantStatusesById((currentStatuses) => ({
         ...currentStatuses,
-        [activeUserId]: "submitted",
+        [activeUserId]: APPLICANT_STATUS_SUBMITTED,
       }))
       return
     }
 
     setIsSubmitting(false)
-    setApplicantStatus("submitted")
+    setApplicantStatus(APPLICANT_STATUS_SUBMITTED)
     setApplicantStatusesById((currentStatuses) => ({
       ...currentStatuses,
-      [activeUserId]: "submitted",
+      [activeUserId]: APPLICANT_STATUS_SUBMITTED,
     }))
   }
 
   const handleCompleteStep3 = async (
-    mode: "join" | "create" | "INDIVIDUAL",
+    mode: TeamSelectionMode,
     createTeamDraft?: CreateTeamDraft,
   ): Promise<boolean> => {
     setError("")
 
-    if (mode === "join" && !form.teamCode.trim()) {
+    if (mode === TEAM_SELECTION_MODE_JOIN && !form.teamCode.trim()) {
       setError("Please enter a team code or proceed without a team.")
       return false
     }
 
-    if (mode === "create" && !createTeamDraft?.name.trim()) {
+    if (mode === TEAM_SELECTION_MODE_CREATE && !createTeamDraft?.name.trim()) {
       setError("Please enter a team name or proceed without a team.")
       return false
     }
 
-    if (mode === "create" && !createTeamDraft?.description.trim()) {
+    if (mode === TEAM_SELECTION_MODE_CREATE && !createTeamDraft?.description.trim()) {
       setError("Please enter a team description or proceed without a team.")
       return false
     }
 
-    const nextTeamCode = mode === "join" ? form.teamCode.trim() : ""
-    const nextNewTeamName = mode === "create" ? (createTeamDraft?.name ?? "").trim() : ""
-    const nextNewTeamDescription = mode === "create" ? (createTeamDraft?.description ?? "").trim() : ""
+    const nextTeamCode = mode === TEAM_SELECTION_MODE_JOIN ? form.teamCode.trim() : ""
+    const nextNewTeamName = mode === TEAM_SELECTION_MODE_CREATE ? (createTeamDraft?.name ?? "").trim() : ""
+    const nextNewTeamDescription = mode === TEAM_SELECTION_MODE_CREATE ? (createTeamDraft?.description ?? "").trim() : ""
 
-    if (mode !== "join" && form.teamCode !== "") {
+    if (mode !== TEAM_SELECTION_MODE_JOIN && form.teamCode !== "") {
       setForm((currentForm) => ({
         ...currentForm,
         teamCode: "",
@@ -678,7 +686,7 @@ export function useApplicationForm() {
 
     setIsFinalizingStep3(true)
 
-    if (mode === "join") {
+    if (mode === TEAM_SELECTION_MODE_JOIN) {
       const activeUserId = user?.uid
       if (!activeUserId) {
         setIsFinalizingStep3(false)
@@ -700,7 +708,7 @@ export function useApplicationForm() {
       }
     }
 
-    if (mode === "create") {
+    if (mode === TEAM_SELECTION_MODE_CREATE) {
       const activeUserId = user?.uid
       if (!activeUserId) {
         setIsFinalizingStep3(false)
@@ -721,7 +729,7 @@ export function useApplicationForm() {
 
         setForm((currentForm) => ({
           ...currentForm,
-          teamSelectionMode: "create",
+          teamSelectionMode: TEAM_SELECTION_MODE_CREATE,
           teamCode: normalizedCurrent.teamCode,
         }))
       } catch {
@@ -750,10 +758,10 @@ export function useApplicationForm() {
     const submissionForm = normalizeFormState({
       ...form,
       teamCode: "",
-      teamSelectionMode: "INDIVIDUAL",
+      teamSelectionMode: TEAM_SELECTION_MODE_INDIVIDUAL,
     })
 
-    const finalized = await handleCompleteStep3("INDIVIDUAL")
+    const finalized = await handleCompleteStep3(TEAM_SELECTION_MODE_INDIVIDUAL)
     if (!finalized) {
       return
     }

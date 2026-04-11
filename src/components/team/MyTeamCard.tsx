@@ -1,12 +1,20 @@
 import { Users, Briefcase } from "lucide-react"
 import { Badge } from "@/components/ui"
+import {
+  APPLICANT_STATUS_STARTED,
+  APPLICANT_STATUS_SUBMITTED,
+  TEAM_STATUS_APPLICATION_SUBMITTED,
+  TEAM_STATUS_INITIAL,
+  type ApplicantStatus,
+  type TeamStatus,
+} from "../../../shared/types"
 
 function formatTeamStatus(status: string) {
-  if (status === "INITIAL") {
+  if (status === TEAM_STATUS_INITIAL) {
     return "Draft"
   }
 
-  if (status === "APPLICATION_SUBMITTED") {
+  if (status === TEAM_STATUS_APPLICATION_SUBMITTED) {
     return "Application submitted"
   }
 
@@ -25,10 +33,10 @@ type MyTeamCardProps = {
   memberCount: number
   memberIds?: string[]
   memberNames?: string[]
-  memberStatuses?: string[]
+  memberStatuses?: ApplicantStatus[]
   leaderId?: string
   currentUserId?: string
-  status?: string
+  status?: TeamStatus
   teamCode?: string
   onKickTeamMember?: (memberId: string) => void | Promise<void>
   isUpdatingTeamMembers?: boolean
@@ -117,7 +125,7 @@ export function MyTeamCard({
             <div className="mt-3 space-y-2">
               {memberNames.map((memberName, index) => {
                 const memberId = memberIds[index]
-                const memberStatus = memberStatuses[index] ?? "unknown"
+                const memberStatus: ApplicantStatus | "UNKNOWN" = memberStatuses[index] ?? "UNKNOWN"
                 const isCurrentUserRow = !!currentUserId && memberId === currentUserId
                 const isLeaderRow = !!leaderId && memberId === leaderId
                 const canKick =
@@ -140,9 +148,9 @@ export function MyTeamCard({
                       </span>
                       <Badge
                         className={
-                          memberStatus === "submitted"
+                          memberStatus === APPLICANT_STATUS_SUBMITTED
                             ? "bg-green-500/10 text-green-400 border-green-500/30"
-                            : memberStatus === "started"
+                            : memberStatus === APPLICANT_STATUS_STARTED
                               ? "bg-secondary/40 text-foreground/70 border-border/30"
                               : "bg-secondary/30 text-muted-foreground border-border/20"
                         }

@@ -5,6 +5,12 @@ import type { ApplicationFormState, CreateTeamDraft } from "./ApplicationForm.ty
 import { isNonEmpty } from "./ApplicationForm.types"
 import { TEAM_MAX_MEMBERS, type PendingTeamRecord } from "@/lib/teams"
 import type { ApplicantStatus } from "@/lib/applicants"
+import {
+  TEAM_SELECTION_MODE_CREATE,
+  TEAM_SELECTION_MODE_INDIVIDUAL,
+  TEAM_SELECTION_MODE_JOIN,
+  TEAM_STATUS_INITIAL,
+} from "../../../shared/types"
 
 interface Step3Props {
   form: ApplicationFormState
@@ -72,7 +78,7 @@ export function ApplicationFormStep3({
   const [createTeamName, setCreateTeamName] = useState("")
   const [createTeamDescription, setCreateTeamDescription] = useState("")
   const shouldHideTeamSelectionAfterIndividualSubmit =
-    isApplicationSubmitted && form.teamSelectionMode === "INDIVIDUAL" && !shouldShowTeamCard
+    isApplicationSubmitted && form.teamSelectionMode === TEAM_SELECTION_MODE_INDIVIDUAL && !shouldShowTeamCard
 
   return (
     <>
@@ -87,7 +93,7 @@ export function ApplicationFormStep3({
           memberStatuses={teamMemberStatusesForCard}
           leaderId={managedPendingTeam?.leaderId ?? undefined}
           currentUserId={activeUserId}
-          status={managedPendingTeam?.status || "INITIAL"}
+          status={managedPendingTeam?.status || TEAM_STATUS_INITIAL}
           teamCode={managedPendingTeam?.teamCode || form.teamCode}
           onKickTeamMember={isManagedTeamLeader ? onKickMember : undefined}
           isUpdatingTeamMembers={isUpdatingTeamMembers}
@@ -104,23 +110,23 @@ export function ApplicationFormStep3({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
             <Button
               type="button"
-              variant={form.teamSelectionMode === "join" ? "default" : "outline"}
+              variant={form.teamSelectionMode === TEAM_SELECTION_MODE_JOIN ? "default" : "outline"}
               className="w-full"
-              onClick={() => onUpdateField("teamSelectionMode", "join")}
+              onClick={() => onUpdateField("teamSelectionMode", TEAM_SELECTION_MODE_JOIN)}
             >
               Join Existing Team
             </Button>
             <Button
               type="button"
-              variant={form.teamSelectionMode === "create" ? "default" : "outline"}
+              variant={form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE ? "default" : "outline"}
               className="w-full"
-              onClick={() => onUpdateField("teamSelectionMode", "create")}
+              onClick={() => onUpdateField("teamSelectionMode", TEAM_SELECTION_MODE_CREATE)}
             >
               Create New Team
             </Button>
           </div>
 
-          {form.teamSelectionMode === "join" && (
+          {form.teamSelectionMode === TEAM_SELECTION_MODE_JOIN && (
             <Input
               type="text"
               value={form.teamCode}
@@ -131,7 +137,7 @@ export function ApplicationFormStep3({
             />
           )}
 
-          {form.teamSelectionMode === "create" && (
+          {form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE && (
             <div className="space-y-3">
               <Input
                 type="text"
@@ -188,13 +194,13 @@ export function ApplicationFormStep3({
                   disabled={
                     hasCreatedPendingTeam ||
                     isFinalizingStep3 ||
-                    (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
-                    (form.teamSelectionMode === "create" &&
+                    (form.teamSelectionMode === TEAM_SELECTION_MODE_JOIN && !isNonEmpty(form.teamCode)) ||
+                    (form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE &&
                       (!isNonEmpty(createTeamName) ||
                         !isNonEmpty(createTeamDescription)))
                   }
                   onClick={
-                    form.teamSelectionMode === "create"
+                    form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE
                       ? () => onCreateTeam({
                         name: createTeamName,
                         description: createTeamDescription,
@@ -204,7 +210,7 @@ export function ApplicationFormStep3({
                 >
                   {isFinalizingStep3
                     ? "Saving..."
-                    : form.teamSelectionMode === "create"
+                    : form.teamSelectionMode === TEAM_SELECTION_MODE_CREATE
                       ? "Create New Team"
                       : "Join Team with Code"}
                 </Button>

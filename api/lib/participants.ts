@@ -1,18 +1,11 @@
 import { db } from "./firebase-admin.ts"
+import type { SharedParticipantProfile } from "../../shared/types.ts"
+import { normalizeApplicantStatus } from "../../shared/types.ts"
+
+export type { SharedParticipantProfile } from "../../shared/types.ts"
 
 type TeamMembershipRecord = {
   memberIds?: unknown
-}
-
-export type SharedParticipantProfile = {
-  uid: string
-  prename: string
-  surname: string
-  fullName: string
-  nationality: string
-  university: string
-  generalSkills: string
-  status: "started" | "submitted"
 }
 
 const toStringArray = (value: unknown): string[] => {
@@ -99,6 +92,6 @@ export async function fetchParticipantProfileForSharedTeam(
     nationality: readString(profileData?.nationality),
     university: readString(profileData?.university),
     generalSkills: readString(profileData?.generalSkills),
-    status: applicationData?.status === "submitted" ? "submitted" : "started",
+    status: normalizeApplicantStatus(applicationData?.status),
   }
 }

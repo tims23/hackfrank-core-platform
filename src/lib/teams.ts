@@ -6,8 +6,11 @@ import {
 } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 import { apiCall } from "@/lib/api"
+import type { PendingTeamRecord, TeamStatus } from "../../shared/types"
+import { DEFAULT_TEAM_STATUS, normalizeTeamStatus } from "../../shared/types"
 
-export type TeamStatus = "INITIAL" | "APPLICATION_SUBMITTED"
+export type { PendingTeamRecord, TeamStatus } from "../../shared/types"
+
 export const TEAM_MAX_MEMBERS = 4
 
 export type TeamRecord = {
@@ -22,17 +25,6 @@ export type TeamRecord = {
   leaderId?: string | null
   status?: TeamStatus
   teamCode?: string
-}
-
-export type PendingTeamRecord = {
-  docId: string
-  name: string
-  description: string
-  maxMembers: number
-  memberIds: string[]
-  status: TeamStatus
-  teamCode?: string
-  leaderId?: string | null
 }
 
 const sortTeams = (teams: TeamRecord[]) =>
@@ -75,7 +67,7 @@ const normalizeTeam = (
       : typeof data.leaderId === "number" && Number.isFinite(data.leaderId)
         ? String(data.leaderId)
         : null,
-  status: data.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED",
+  status: normalizeTeamStatus(data.status),
   teamCode: typeof data.teamCode === "string" ? data.teamCode.trim() : undefined,
 })
 
@@ -191,7 +183,7 @@ export const subscribeToPendingTeamByCode = (
         description: normalizedTeam.description,
         maxMembers: normalizedTeam.maxMembers,
         memberIds: normalizedTeam.memberIds,
-        status: normalizedTeam.status ?? "INITIAL",
+        status: normalizedTeam.status ?? DEFAULT_TEAM_STATUS,
         teamCode: normalizedTeam.teamCode,
         leaderId: normalizedTeam.leaderId,
       })

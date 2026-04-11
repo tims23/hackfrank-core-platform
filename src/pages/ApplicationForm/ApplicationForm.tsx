@@ -5,6 +5,12 @@ import { steps } from "./ApplicationForm.types"
 import { ApplicationFormStep1 } from "./ApplicationFormStep1"
 import { ApplicationFormStep2 } from "./ApplicationFormStep2"
 import { ApplicationFormStep3 } from "./ApplicationFormStep3"
+import {
+  TEAM_SELECTION_MODE_CREATE,
+  TEAM_SELECTION_MODE_INDIVIDUAL,
+  TEAM_SELECTION_MODE_JOIN,
+  TEAM_STATUS_INITIAL,
+} from "../../../shared/types"
 
 export function ApplicationForm() {
   const form = useApplicationForm()
@@ -13,10 +19,10 @@ export function ApplicationForm() {
     form.isApplicationSubmitted &&
     form.isManagedTeamMember &&
     !form.isManagedTeamLeader &&
-    form.managedPendingTeam?.status === "INITIAL"
+    form.managedPendingTeam?.status === TEAM_STATUS_INITIAL
   const reviewBannerMessage = shouldShowTeamMemberWaitingBanner
     ? "You have finished your part. Your team leader still needs to submit the team application."
-    : form.form.teamSelectionMode === "INDIVIDUAL"
+    : form.form.teamSelectionMode === TEAM_SELECTION_MODE_INDIVIDUAL
       ? "Your individual application was submitted and is currently under review."
       : "Your team application was submitted and is currently under review."
 
@@ -137,12 +143,12 @@ export function ApplicationForm() {
                 onUpdateField={form.updateField}
                 onPrevStep={() => form.setStep(2)}
                 onProceedWithoutTeam={form.handleProceedWithoutTeam}
-                onJoinTeam={() => form.handleCompleteStep3("join")}
-                onCreateTeam={(createTeamDraft) => form.handleCompleteStep3("create", createTeamDraft)}
+                onJoinTeam={() => form.handleCompleteStep3(TEAM_SELECTION_MODE_JOIN)}
+                onCreateTeam={(createTeamDraft) => form.handleCompleteStep3(TEAM_SELECTION_MODE_CREATE, createTeamDraft)}
                 onSubmitAsTeamMember={form.handleSubmitApplicationAsTeamMember}
                 onSubmitAsTeamLeader={form.handleSubmitApplicationAsTeamLeader}
                 onKickMember={
-                  form.isManagedTeamLeader && form.managedPendingTeam?.status === "INITIAL"
+                  form.isManagedTeamLeader && form.managedPendingTeam?.status === TEAM_STATUS_INITIAL
                     ? form.handleKickTeamMember
                     : undefined
                 }

@@ -1,44 +1,20 @@
 import { doc, onSnapshot } from "firebase/firestore"
 import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 import { apiCall, apiGet } from "@/lib/api"
+import type {
+  ApplicantFormInput,
+  ApplicantRecord,
+  ApplicantStatus,
+  SharedParticipantProfile,
+} from "../../shared/types"
+import {
+  DEFAULT_APPLICANT_STATUS,
+  DEFAULT_TEAM_SELECTION_MODE,
+  normalizeApplicantStatus,
+  normalizeTeamSelectionMode,
+} from "../../shared/types"
 
-export type ApplicantStatus = "started" | "submitted"
-
-export type ApplicantRecord = {
-  uid: string
-  status: ApplicantStatus
-  prename?: string
-  surname?: string
-  birthday?: string
-  gender?: string
-  phoneNumber?: string
-  nationality?: string
-  university?: string
-  currentCv?: string
-  motivation?: string
-  programmingSkillLevel?: string
-  skills?: string[]
-  hackathonsAttended?: number
-  teamCode?: string
-  teamSelectionMode?: "join" | "create" | "INDIVIDUAL"
-}
-
-export type ApplicantFormInput = {
-  prename: string
-  surname: string
-  birthday: string
-  gender: string
-  phoneNumber: string
-  nationality: string
-  university: string
-  currentCv: string
-  motivation: string
-  programmingSkillLevel: string
-  generalSkills: string
-  hackathonsAttended: string
-  teamCode: string
-  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
-}
+export type { ApplicantFormInput, ApplicantRecord, ApplicantStatus, TeamSelectionMode } from "../../shared/types"
 
 export type ApplicantFormResponse = {
   success: boolean
@@ -71,7 +47,7 @@ export const fetchApplicantFormData = async (
   const application = result.application ?? null
 
   return {
-    status: application?.status === "submitted" ? "submitted" : "started",
+    status: normalizeApplicantStatus(application?.status),
     prename: application?.prename ?? "",
     surname: application?.surname ?? "",
     birthday: application?.birthday ?? "",
@@ -104,26 +80,9 @@ const readApplicantNumber = (value: unknown): number | null =>
 const getParticipantApplicationDocRef = (uid: string) =>
   doc(firestoreDb, "participants", uid, "details", "application")
 
-const normalizeTeamSelectionMode = (value: unknown): "join" | "create" | "INDIVIDUAL" => {
-  if (value === "create") {
-    return "create"
-  }
-
-  if (value === "INDIVIDUAL") {
-    return "INDIVIDUAL"
-  }
-
-  return "join"
-}
-
 type SharedParticipantProfileResponse = {
   success: boolean
-  profile: {
-    uid: string
-    prename: string
-    surname: string
-    status: ApplicantStatus
-  }
+  profile: SharedParticipantProfile
 }
 
 type ApplicantProfileData = {
@@ -222,8 +181,7 @@ export const fetchApplicantProfilesByIds = async (
       const prename = readApplicantString(profileData?.prename ?? applicationData?.prename).trim()
       const surname = readApplicantString(profileData?.surname ?? applicationData?.surname).trim()
       const fullName = `${prename} ${surname}`.trim()
-      const applicantStatus: ApplicantStatus =
-        applicationData?.status === "submitted" ? "submitted" : "started"
+      const applicantStatus: ApplicantStatus = normalizeApplicantStatus(applicationData?.status)
 
       if (fullName.length > 0) {
         namesById[applicantId] = fullName
@@ -276,12 +234,12 @@ export const subscribeToApplicantFormData = (
       if (!data) {
         onApplicantFormData({})
         if (onStatusUpdate) {
-          onStatusUpdate("started")
+          onStatusUpdate(DEFAULT_APPLICANT_STATUS)
         }
         return
       }
 
-      const applicantStatus: ApplicantStatus = data.status === "submitted" ? "submitted" : "started"
+      const applicantStatus: ApplicantStatus = normalizeApplicantStatus(data.status)
 
       if (onStatusUpdate) {
         onStatusUpdate(applicantStatus)
@@ -391,7 +349,7 @@ export const syncApplicantDraft = async (
     payload.teamCode = (applicationDraft.teamCode ?? "").trim()
   }
   if ("teamSelectionMode" in applicationDraft) {
-    payload.teamSelectionMode = applicationDraft.teamSelectionMode ?? "join"
+    payload.teamSelectionMode = applicationDraft.teamSelectionMode ?? DEFAULT_TEAM_SELECTION_MODE
   }
 
   logFirebaseFetch("api:write:start", {

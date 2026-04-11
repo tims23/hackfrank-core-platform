@@ -1,19 +1,21 @@
 import { db } from "./firebase-admin.ts"
 import { FieldValue } from "firebase-admin/firestore"
+import type { PendingTeamRecord, TeamStatus } from "../../shared/types.ts"
+import {
+  APPLICANT_STATUS_STARTED,
+  APPLICANT_STATUS_SUBMITTED,
+  DEFAULT_TEAM_SELECTION_MODE,
+  normalizeApplicantStatus,
+  normalizeTeamStatus,
+  normalizeTeamSelectionMode,
+  TEAM_SELECTION_MODE_INDIVIDUAL,
+  TEAM_STATUS_APPLICATION_SUBMITTED,
+  TEAM_STATUS_INITIAL,
+} from "../../shared/types.ts"
 
-export type TeamStatus = "INITIAL" | "APPLICATION_SUBMITTED"
+export type { PendingTeamRecord, TeamStatus } from "../../shared/types.ts"
+
 const TEAM_MAX_MEMBERS = 4
-
-export type PendingTeamRecord = {
-  docId: string
-  name: string
-  description: string
-  maxMembers: typeof TEAM_MAX_MEMBERS
-  memberIds: string[]
-  status: TeamStatus
-  teamCode?: string
-  leaderId?: string | null
-}
 
 const generateTeamCode = (): string => Math.random().toString(36).slice(2, 8).toUpperCase()
 
@@ -43,15 +45,10 @@ const assertTeamSelectionOpen = async (applicantId: string): Promise<void> => {
     teamSelectionMode?: unknown
   } | undefined
 
-  const applicationStatus = applicationData?.status === "submitted" ? "submitted" : "started"
-  const teamSelectionMode =
-    applicationData?.teamSelectionMode === "create"
-      ? "create"
-      : applicationData?.teamSelectionMode === "INDIVIDUAL"
-        ? "INDIVIDUAL"
-        : "join"
+  const applicationStatus = normalizeApplicantStatus(applicationData?.status)
+  const teamSelectionMode = normalizeTeamSelectionMode(applicationData?.teamSelectionMode)
 
-  if (applicationStatus === "submitted" || teamSelectionMode === "INDIVIDUAL") {
+  if (applicationStatus === APPLICANT_STATUS_SUBMITTED || teamSelectionMode === TEAM_SELECTION_MODE_INDIVIDUAL) {
     throw new TeamSelectionLockedError()
   }
 }
@@ -82,7 +79,7 @@ export async function createPendingTeamFromApplication(
     description: normalizedDescription,
     leaderId,
     teamCode,
-    status: "INITIAL",
+    status: TEAM_STATUS_INITIAL,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })
@@ -121,7 +118,7 @@ export async function joinPendingTeamByCode(
   const teamsSnapshot = await db
     .collection("teams")
     .where("teamCode", "==", normalizedTeamCode)
-    .where("status", "==", "INITIAL")
+    .where("status", "==", TEAM_STATUS_INITIAL)
     .limit(1)
     .get()
 
@@ -141,8 +138,8 @@ export async function joinPendingTeamByCode(
     }
 
     const teamData = freshTeamSnapshot.data() as { memberIds?: unknown; status?: unknown } | undefined
-    const teamStatus = teamData?.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED"
-    if (teamStatus !== "INITIAL") {
+    const teamStatus = normalizeTeamStatus(teamData?.status)
+    if (teamStatus !== TEAM_STATUS_INITIAL) {
       return false
     }
 
@@ -207,10 +204,10 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
       .doc("application")
       .set(
         {
-          status: "started",
+          status: APPLICANT_STATUS_STARTED,
           submittedAt: FieldValue.delete(),
           teamCode: "",
-          teamSelectionMode: "join",
+          teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -220,9 +217,9 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
   console.log("[api/lib/teams] leavePendingTeam complete", {
     teamDocId,
     memberId: normalizedMemberId,
-    applicationStatus: "started",
+    applicationStatus: APPLICANT_STATUS_STARTED,
     teamCode: "",
-    teamSelectionMode: "join",
+    teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
   })
 }
 
@@ -233,9 +230,9 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
 
   const teamSnapshot = await db.collection("teams").doc(teamDocId).get()
   const teamData = teamSnapshot.data() as { status?: unknown } | undefined
-  const teamStatus = teamData?.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED"
+  const teamStatus = normalizeTeamStatus(teamData?.status)
 
-  if (teamStatus === "APPLICATION_SUBMITTED") {
+  if (teamStatus === TEAM_STATUS_APPLICATION_SUBMITTED) {
     console.warn("[api/lib/teams] kickPendingTeamMember blocked for submitted team", {
       teamDocId,
       memberId: normalizedMemberId,
@@ -256,9 +253,9 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
       .doc("application")
       .set(
         {
-          status: "started",
+          status: APPLICANT_STATUS_STARTED,
           teamCode: "",
-          teamSelectionMode: "join",
+          teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -268,9 +265,9 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
   console.log("[api/lib/teams] kickPendingTeamMember complete", {
     teamDocId,
     memberId: normalizedMemberId,
-    applicationStatus: "started",
+    applicationStatus: APPLICANT_STATUS_STARTED,
     teamCode: "",
-    teamSelectionMode: "join",
+    teamSelectionMode: DEFAULT_TEAM_SELECTION_MODE,
   })
 }
 
@@ -293,8 +290,8 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
       status?: unknown
     }
 
-    const currentStatus = teamData?.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED"
-    if (currentStatus === "APPLICATION_SUBMITTED") {
+    const currentStatus = normalizeTeamStatus(teamData?.status)
+    if (currentStatus === TEAM_STATUS_APPLICATION_SUBMITTED) {
       return
     }
 
@@ -327,15 +324,15 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
 
       const applicationSnapshot = await transaction.get(applicationDocRef)
       const applicationData = applicationSnapshot.data() as { status?: unknown } | undefined
-      const applicationStatus = applicationData?.status === "submitted" ? "submitted" : "started"
+      const applicationStatus = normalizeApplicantStatus(applicationData?.status)
 
-      if (memberId !== normalizedLeaderId && applicationStatus !== "submitted") {
+      if (memberId !== normalizedLeaderId && applicationStatus !== APPLICANT_STATUS_SUBMITTED) {
         throw new Error("All team members must submit their applications before team submission")
       }
     }
 
     transaction.update(teamDocRef, {
-      status: "APPLICATION_SUBMITTED",
+      status: TEAM_STATUS_APPLICATION_SUBMITTED,
       submittedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     })
@@ -349,7 +346,7 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
     transaction.set(
       leaderApplicationDocRef,
       {
-        status: "submitted",
+        status: APPLICANT_STATUS_SUBMITTED,
         submittedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -360,7 +357,7 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
   console.log("[api/lib/teams] submitPendingTeamApplication complete", {
     teamDocId,
     leaderId: normalizedLeaderId,
-    status: "APPLICATION_SUBMITTED",
-    applicationStatus: "submitted",
+    status: TEAM_STATUS_APPLICATION_SUBMITTED,
+    applicationStatus: APPLICANT_STATUS_SUBMITTED,
   })
 }
