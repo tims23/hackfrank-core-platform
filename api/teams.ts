@@ -8,7 +8,6 @@ import {
   leavePendingTeam,
   kickPendingTeamMember,
   submitPendingTeamApplication,
-  SubmittedApplicationLeaveError,
   SubmittedTeamMutationError,
   TeamSelectionLockedError,
 } from "./lib/teams.ts"
@@ -24,27 +23,25 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
 
     switch (action) {
       case "create": {
-        const { name, description, maxMembers } = data as {
+        const { name, description } = data as {
           name: string
           description: string
-          maxMembers: number
         }
 
-        if (!name || !description || !maxMembers) {
+        if (!name || !description) {
           console.warn("[api/teams] Create validation failed", {
             uid,
             hasName: Boolean(name),
             hasDescription: Boolean(description),
-            hasMaxMembers: Boolean(maxMembers),
           })
           res.status(400).json({ error: "Missing required fields" })
           return
         }
 
-        console.log("[api/teams] Creating pending team", { uid, maxMembers })
+        console.log("[api/teams] Creating pending team", { uid })
         let result: { teamCode: string }
         try {
-          result = await createPendingTeamFromApplication(uid, name, description, maxMembers)
+          result = await createPendingTeamFromApplication(uid, name, description)
         } catch (error) {
           if (error instanceof TeamSelectionLockedError) {
             console.warn("[api/teams] Create blocked by applicant team-selection lock", { uid })
@@ -136,17 +133,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         }
 
         console.log("[api/teams] Leaving pending team", { uid, teamDocId })
-        try {
-          await leavePendingTeam(teamDocId, uid)
-        } catch (error) {
-          if (error instanceof SubmittedApplicationLeaveError) {
-            console.warn("[api/teams] Leave blocked for submitted member", { uid, teamDocId })
-            res.status(403).json({ error: error.message })
-            return
-          }
-
-          throw error
-        }
+        await leavePendingTeam(teamDocId, uid)
         console.log("[api/teams] Left pending team", { uid, teamDocId })
         res.status(200).json({ success: true })
         return

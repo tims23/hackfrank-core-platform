@@ -104,8 +104,7 @@ export function useApplicationForm() {
   const shouldShowTeamCard = hasCreatedPendingTeam || isManagedTeamMember || isManagedTeamPendingMember
   const canLeaveManagedTeam =
     (isManagedTeamMember || isManagedTeamPendingMember) &&
-    !isManagedTeamLeader &&
-    !isApplicationSubmitted
+    !isManagedTeamLeader
   const shouldShowJoinedMemberSubmitAction =
     (isManagedTeamMember || isManagedTeamLeader) && !isApplicationSubmitted
   const teamMemberIdsForCard = managedPendingTeam?.memberIds ?? (activeUserId ? [activeUserId] : [])
@@ -695,18 +694,9 @@ export function useApplicationForm() {
       return false
     }
 
-    if (mode === "create") {
-      const parsedMaxMembers = Number.parseInt(createTeamDraft?.maxMembers ?? "", 10)
-      if (!Number.isFinite(parsedMaxMembers) || parsedMaxMembers < 2 || parsedMaxMembers > 4) {
-        setError("Max members must be a number between 2 and 4.")
-        return false
-      }
-    }
-
     const nextTeamCode = mode === "join" ? form.teamCode.trim() : ""
     const nextNewTeamName = mode === "create" ? (createTeamDraft?.name ?? "").trim() : ""
     const nextNewTeamDescription = mode === "create" ? (createTeamDraft?.description ?? "").trim() : ""
-    const nextNewTeamMaxMembers = mode === "create" ? (createTeamDraft?.maxMembers ?? "").trim() : ""
 
     if (mode !== "join" && form.teamCode !== "") {
       setForm((currentForm) => ({
@@ -768,14 +758,11 @@ export function useApplicationForm() {
         return false
       }
 
-      const parsedMaxMembers = Number.parseInt(nextNewTeamMaxMembers || "", 10)
-
       try {
         const result = await createPendingTeamFromApplication(
           activeUserId,
           nextNewTeamName,
           nextNewTeamDescription,
-          parsedMaxMembers,
         )
 
         if (!nextTeamCode && result.teamCode) {

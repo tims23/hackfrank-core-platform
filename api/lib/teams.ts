@@ -2,12 +2,13 @@ import { db } from "./firebase-admin.ts"
 import { FieldValue } from "firebase-admin/firestore"
 
 export type TeamStatus = "INITIAL" | "APPLICATION_SUBMITTED"
+const TEAM_MAX_MEMBERS = 4
 
 export type PendingTeamRecord = {
   docId: string
   name: string
   description: string
-  maxMembers: number
+  maxMembers: typeof TEAM_MAX_MEMBERS
   memberIds: string[]
   pendingMemberIds: string[]
   status: TeamStatus
@@ -16,13 +17,6 @@ export type PendingTeamRecord = {
 }
 
 const generateTeamCode = (): string => Math.random().toString(36).slice(2, 8).toUpperCase()
-
-export class SubmittedApplicationLeaveError extends Error {
-  constructor() {
-    super("Submitted team members cannot leave the team")
-    this.name = "SubmittedApplicationLeaveError"
-  }
-}
 
 export class SubmittedTeamMutationError extends Error {
   constructor() {
@@ -67,16 +61,14 @@ export async function createPendingTeamFromApplication(
   leaderId: string,
   name: string,
   description: string,
-  maxMembers: number,
 ): Promise<{ teamCode: string }> {
   console.log("[api/lib/teams] createPendingTeamFromApplication start", {
     leaderId,
-    requestedMaxMembers: maxMembers,
+    maxMembers: TEAM_MAX_MEMBERS,
   })
 
   const normalizedName = name.trim()
   const normalizedDescription = description.trim()
-  const normalizedMaxMembers = Math.max(2, Math.min(4, maxMembers))
   const teamCode = generateTeamCode()
 
   await assertTeamSelectionOpen(leaderId)
@@ -84,7 +76,6 @@ export async function createPendingTeamFromApplication(
   await db.collection("teams").add({
     id: Date.now(),
     name: normalizedName,
-    maxMembers: normalizedMaxMembers,
     memberIds: [leaderId],
     skills: [],
     looking: true,
@@ -101,7 +92,7 @@ export async function createPendingTeamFromApplication(
   console.log("[api/lib/teams] createPendingTeamFromApplication complete", {
     leaderId,
     teamCode,
-    normalizedMaxMembers,
+    maxMembers: TEAM_MAX_MEMBERS,
   })
 
   return { teamCode }
@@ -222,34 +213,35 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
 
   const normalizedMemberId = memberId.trim()
 
-  const applicationSnapshot = await db
-    .collection("participants")
-    .doc(normalizedMemberId)
-    .collection("details")
-    .doc("application")
-    .get()
-
-  const applicationData = applicationSnapshot.data() as { status?: unknown } | undefined
-  const applicationStatus = applicationData?.status === "submitted" ? "submitted" : "started"
-
-  if (applicationStatus === "submitted") {
-    console.warn("[api/lib/teams] leavePendingTeam blocked for submitted applicant", {
-      teamDocId,
-      memberId: normalizedMemberId,
-      applicationStatus,
-    })
-    throw new SubmittedApplicationLeaveError()
-  }
-
-  await db.collection("teams").doc(teamDocId).update({
-    memberIds: FieldValue.arrayRemove(normalizedMemberId),
-    pendingMemberIds: FieldValue.arrayRemove(normalizedMemberId),
-    updatedAt: FieldValue.serverTimestamp(),
-  })
+  await Promise.all([
+    db.collection("teams").doc(teamDocId).update({
+      memberIds: FieldValue.arrayRemove(normalizedMemberId),
+      pendingMemberIds: FieldValue.arrayRemove(normalizedMemberId),
+      updatedAt: FieldValue.serverTimestamp(),
+    }),
+    db
+      .collection("participants")
+      .doc(normalizedMemberId)
+      .collection("details")
+      .doc("application")
+      .set(
+        {
+          status: "started",
+          submittedAt: FieldValue.delete(),
+          teamCode: "",
+          teamSelectionMode: "join",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      ),
+  ])
 
   console.log("[api/lib/teams] leavePendingTeam complete", {
     teamDocId,
     memberId: normalizedMemberId,
+    applicationStatus: "started",
+    teamCode: "",
+    teamSelectionMode: "join",
   })
 }
 

@@ -8,6 +8,7 @@ import { firestoreDb, logFirebaseFetch } from "@/lib/firebase"
 import { apiCall } from "@/lib/api"
 
 export type TeamStatus = "INITIAL" | "APPLICATION_SUBMITTED"
+export const TEAM_MAX_MEMBERS = 4
 
 export type TeamRecord = {
   id: number
@@ -54,6 +55,7 @@ const normalizeTeam = (
 ): TeamRecord => ({
   ...data,
   id: parseTeamId(documentId, data.id),
+  maxMembers: TEAM_MAX_MEMBERS,
   memberIds: Array.isArray(data.memberIds)
     ? data.memberIds
         .flatMap((memberId) => {
@@ -98,7 +100,6 @@ export const createPendingTeamFromApplication = async (
   leaderId: string,
   name: string,
   description: string,
-  maxMembers: number,
 ): Promise<{ teamCode: string }> => {
   logFirebaseFetch("api:write:start", {
     endpoint: "/api/teams",
@@ -110,7 +111,6 @@ export const createPendingTeamFromApplication = async (
     const result = await apiCall<{ teamCode: string }>("/api/teams", "create", {
       name,
       description,
-      maxMembers,
     })
 
     logFirebaseFetch("api:write:success", {

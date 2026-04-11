@@ -22,7 +22,6 @@ export type ApplicationFormState = {
 export type CreateTeamDraft = {
   name: string
   description: string
-  maxMembers: string
 }
 
 export type Step2Field =
