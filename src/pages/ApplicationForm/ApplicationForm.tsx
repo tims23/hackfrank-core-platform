@@ -127,15 +127,12 @@ export function ApplicationForm() {
                 canLeaveManagedTeam={form.canLeaveManagedTeam}
                 shouldShowJoinedMemberSubmitAction={form.shouldShowJoinedMemberSubmitAction}
                 canSubmitApplication={form.canSubmitApplication}
-                isManagedTeamPendingMember={form.isManagedTeamPendingMember}
-                hasPendingTeamMembers={form.hasPendingTeamMembers}
                 
                 managedPendingTeam={form.managedPendingTeam}
                 activeUserId={form.activeUserId}
                 teamMemberNamesForCard={form.teamMemberNamesForCard}
                 teamMemberStatusesForCard={form.teamMemberStatusesForCard}
                 teamMemberIdsForCard={form.teamMemberIdsForCard}
-                pendingMemberNamesForCard={form.pendingMemberNamesForCard}
                 
                 onUpdateField={form.updateField}
                 onPrevStep={() => form.setStep(2)}
@@ -149,10 +146,8 @@ export function ApplicationForm() {
                     ? form.handleKickTeamMember
                     : undefined
                 }
-                onApproveMember={form.handleApprovePendingMember}
-                onDeclineMember={form.handleDeclinePendingMember}
                 onLeaveTeam={form.handleLeaveTeam}
-                isUpdatingPendingMembers={form.isUpdatingPendingMembers}
+                isUpdatingTeamMembers={form.isUpdatingTeamMembers}
                 isLeavingTeam={form.isLeavingTeam}
               />
             )}

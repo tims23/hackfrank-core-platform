@@ -22,7 +22,6 @@ export type TeamRecord = {
   leaderId?: string | null
   status?: TeamStatus
   teamCode?: string
-  pendingMemberIds?: string[]
 }
 
 export type PendingTeamRecord = {
@@ -31,7 +30,6 @@ export type PendingTeamRecord = {
   description: string
   maxMembers: number
   memberIds: string[]
-  pendingMemberIds: string[]
   status: TeamStatus
   teamCode?: string
   leaderId?: string | null
@@ -79,21 +77,6 @@ const normalizeTeam = (
         : null,
   status: data.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED",
   teamCode: typeof data.teamCode === "string" ? data.teamCode.trim() : undefined,
-  pendingMemberIds: Array.isArray(data.pendingMemberIds)
-    ? data.pendingMemberIds
-        .flatMap((pendingId) => {
-          if (typeof pendingId === "string") {
-            const normalized = pendingId.trim()
-            return normalized ? [normalized] : []
-          }
-
-          if (typeof pendingId === "number" && Number.isFinite(pendingId)) {
-            return [String(pendingId)]
-          }
-
-          return []
-        })
-    : [],
 })
 
 export const createPendingTeamFromApplication = async (
@@ -173,7 +156,7 @@ export const subscribeToPendingTeamByCode = (
   logFirebaseFetch("onSnapshot:subscribe", {
     collection: "teams",
     teamCode: normalizedTeamCode,
-    mode: "application-pending-team",
+    mode: "application-team",
   })
 
   const teamsQuery = query(
@@ -191,7 +174,7 @@ export const subscribeToPendingTeamByCode = (
         teamCode: normalizedTeamCode,
         size: snapshot.size,
         fromCache: snapshot.metadata.fromCache,
-        mode: "application-pending-team",
+        mode: "application-team",
       })
 
       if (!matchedTeamDoc) {
@@ -208,7 +191,6 @@ export const subscribeToPendingTeamByCode = (
         description: normalizedTeam.description,
         maxMembers: normalizedTeam.maxMembers,
         memberIds: normalizedTeam.memberIds,
-        pendingMemberIds: normalizedTeam.pendingMemberIds ?? [],
         status: normalizedTeam.status ?? "INITIAL",
         teamCode: normalizedTeam.teamCode,
         leaderId: normalizedTeam.leaderId,
@@ -218,7 +200,7 @@ export const subscribeToPendingTeamByCode = (
       logFirebaseFetch("onSnapshot:error", {
         collection: "teams",
         teamCode: normalizedTeamCode,
-        mode: "application-pending-team",
+        mode: "application-team",
         message: snapshotError.message,
       })
 
@@ -227,62 +209,6 @@ export const subscribeToPendingTeamByCode = (
       }
     },
   )
-}
-
-export const approvePendingMember = async (teamDocId: string, pendingMemberId: string) => {
-  logFirebaseFetch("api:write:start", {
-    endpoint: "/api/teams",
-    action: "approve-member",
-    teamDocId,
-  })
-
-  try {
-    await apiCall<{ success: boolean }>("/api/teams", "approve-member", {
-      teamDocId,
-      memberId: pendingMemberId,
-    })
-
-    logFirebaseFetch("api:write:success", {
-      endpoint: "/api/teams",
-      action: "approve-member",
-      teamDocId,
-    })
-  } catch (error) {
-    logFirebaseFetch("api:write:error", {
-      endpoint: "/api/teams",
-      action: "approve-member",
-      message: error instanceof Error ? error.message : String(error),
-    })
-    throw error
-  }
-}
-
-export const declinePendingMember = async (teamDocId: string, pendingMemberId: string) => {
-  logFirebaseFetch("api:write:start", {
-    endpoint: "/api/teams",
-    action: "decline-member",
-    teamDocId,
-  })
-
-  try {
-    await apiCall<{ success: boolean }>("/api/teams", "decline-member", {
-      teamDocId,
-      memberId: pendingMemberId,
-    })
-
-    logFirebaseFetch("api:write:success", {
-      endpoint: "/api/teams",
-      action: "decline-member",
-      teamDocId,
-    })
-  } catch (error) {
-    logFirebaseFetch("api:write:error", {
-      endpoint: "/api/teams",
-      action: "decline-member",
-      message: error instanceof Error ? error.message : String(error),
-    })
-    throw error
-  }
 }
 
 export const leavePendingTeam = async (teamDocId: string, memberId: string) => {

@@ -30,17 +30,10 @@ type MyTeamCardProps = {
   currentUserId?: string
   status?: string
   teamCode?: string
-  showPendingMembers?: boolean
-  pendingMemberIds?: string[]
-  pendingMemberNames?: string[]
   onKickTeamMember?: (memberId: string) => void | Promise<void>
   isUpdatingTeamMembers?: boolean
-  onApprovePendingMember?: (memberId: string) => void | Promise<void>
-  onDeclinePendingMember?: (memberId: string) => void | Promise<void>
-  isUpdatingPendingMembers?: boolean
   onLeaveTeam?: () => void | Promise<void>
   isLeavingTeam?: boolean
-  showPendingApprovalRemark?: boolean
 }
 
 export function MyTeamCard({
@@ -56,17 +49,10 @@ export function MyTeamCard({
   currentUserId,
   status,
   teamCode,
-  showPendingMembers = false,
-  pendingMemberIds = [],
-  pendingMemberNames = [],
   onKickTeamMember,
   isUpdatingTeamMembers = false,
-  onApprovePendingMember,
-  onDeclinePendingMember,
-  isUpdatingPendingMembers = false,
   onLeaveTeam,
   isLeavingTeam = false,
-  showPendingApprovalRemark = false,
 }: MyTeamCardProps) {
   return (
     <div className="space-y-4">
@@ -86,13 +72,7 @@ export function MyTeamCard({
               onClick={() => onLeaveTeam()}
               className="px-3 py-1.5 text-xs rounded border border-red-400/40 text-red-300 hover:text-red-200 hover:border-red-300/60 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLeavingTeam
-                ? showPendingApprovalRemark
-                  ? "Canceling..."
-                  : "Leaving..."
-                : showPendingApprovalRemark
-                  ? "Cancel Join Request"
-                  : "Leave Team"}
+              {isLeavingTeam ? "Leaving..." : "Leave Team"}
             </button>
           </div>
         )}
@@ -100,12 +80,6 @@ export function MyTeamCard({
         <div className="mb-4">
           <h4 className="text-xl font-semibold text-foreground mb-2">{teamName}</h4>
           <p className="text-sm text-muted-foreground mb-3">{description}</p>
-
-          {showPendingApprovalRemark && (
-            <p className="text-sm text-amber-300 mb-3 border border-amber-400/30 bg-amber-400/10 rounded-md px-3 py-2">
-              Your join request is pending. You are waiting for approval by the team leader.
-            </p>
-          )}
 
           <div className="flex flex-wrap items-center gap-3 text-sm">
             {caseLabel && (
@@ -135,7 +109,7 @@ export function MyTeamCard({
             <Users className="w-4 h-4" />
             <span>
               {memberCount} {memberCount === 1 ? "member" : "members"} currently in team
-              {memberCount > 0 && !showPendingApprovalRemark ? " (including you)" : ""}
+              {memberCount > 0 ? " (including you)" : ""}
             </span>
           </div>
 
@@ -196,48 +170,6 @@ export function MyTeamCard({
             </div>
           )}
         </div>
-
-        {showPendingMembers && (
-          <div className="border-t border-border/30 pt-4 mt-4">
-            <p className="text-xs text-muted-foreground mb-3">Pending Members</p>
-
-            {pendingMemberIds.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No pending members right now.</p>
-            ) : (
-              <div className="space-y-2">
-                {pendingMemberIds.map((memberId, index) => (
-                  <div
-                    key={memberId}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-md border border-border/30 px-3 py-2"
-                  >
-                    <span className="text-sm text-foreground break-all">
-                      {pendingMemberNames[index] ?? memberId}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isUpdatingPendingMembers || !onDeclinePendingMember}
-                        onClick={() => onDeclinePendingMember?.(memberId)}
-                        className="px-3 py-1 text-xs rounded border border-border/50 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Decline
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isUpdatingPendingMembers || !onApprovePendingMember}
-                        onClick={() => onApprovePendingMember?.(memberId)}
-                        className="px-3 py-1 text-xs rounded bg-brand-cyan text-background hover:bg-brand-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Approve
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
       </div>
     </div>
   )

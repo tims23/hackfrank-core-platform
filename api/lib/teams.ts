@@ -10,7 +10,6 @@ export type PendingTeamRecord = {
   description: string
   maxMembers: typeof TEAM_MAX_MEMBERS
   memberIds: string[]
-  pendingMemberIds: string[]
   status: TeamStatus
   teamCode?: string
   leaderId?: string | null
@@ -84,7 +83,6 @@ export async function createPendingTeamFromApplication(
     leaderId,
     teamCode,
     status: "INITIAL",
-    pendingMemberIds: [],
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })
@@ -136,10 +134,52 @@ export async function joinPendingTeamByCode(
     return false
   }
 
-  await matchedTeamDoc.ref.update({
-    pendingMemberIds: FieldValue.arrayUnion(normalizedApplicantId),
-    updatedAt: FieldValue.serverTimestamp(),
+  const joined = await db.runTransaction(async (transaction) => {
+    const freshTeamSnapshot = await transaction.get(matchedTeamDoc.ref)
+    if (!freshTeamSnapshot.exists) {
+      return false
+    }
+
+    const teamData = freshTeamSnapshot.data() as { memberIds?: unknown; status?: unknown } | undefined
+    const teamStatus = teamData?.status === "INITIAL" ? "INITIAL" : "APPLICATION_SUBMITTED"
+    if (teamStatus !== "INITIAL") {
+      return false
+    }
+
+    const memberIds = Array.isArray(teamData?.memberIds)
+      ? [...new Set(teamData.memberIds.flatMap((memberId) => {
+        if (typeof memberId === "string") {
+          const normalizedMemberId = memberId.trim()
+          return normalizedMemberId.length > 0 ? [normalizedMemberId] : []
+        }
+
+        if (typeof memberId === "number" && Number.isFinite(memberId)) {
+          return [String(memberId)]
+        }
+
+        return []
+      }))]
+      : []
+
+    if (memberIds.includes(normalizedApplicantId)) {
+      return true
+    }
+
+    if (memberIds.length >= TEAM_MAX_MEMBERS) {
+      return false
+    }
+
+    transaction.update(matchedTeamDoc.ref, {
+      memberIds: FieldValue.arrayUnion(normalizedApplicantId),
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    return true
   })
+
+  if (!joined) {
+    return false
+  }
 
   console.log("[api/lib/teams] joinPendingTeamByCode complete", {
     applicantId: normalizedApplicantId,
@@ -150,64 +190,6 @@ export async function joinPendingTeamByCode(
   return true
 }
 
-export async function approvePendingMember(
-  teamDocId: string,
-  pendingMemberId: string,
-): Promise<void> {
-  console.log("[api/lib/teams] approvePendingMember start", { teamDocId, pendingMemberId })
-
-  const normalizedPendingMemberId = pendingMemberId.trim()
-
-  await db.collection("teams").doc(teamDocId).update({
-    pendingMemberIds: FieldValue.arrayRemove(normalizedPendingMemberId),
-    memberIds: FieldValue.arrayUnion(normalizedPendingMemberId),
-    updatedAt: FieldValue.serverTimestamp(),
-  })
-
-  console.log("[api/lib/teams] approvePendingMember complete", {
-    teamDocId,
-    pendingMemberId: normalizedPendingMemberId,
-  })
-}
-
-export async function declinePendingMember(
-  teamDocId: string,
-  pendingMemberId: string,
-): Promise<void> {
-  console.log("[api/lib/teams] declinePendingMember start", { teamDocId, pendingMemberId })
-
-  const normalizedPendingMemberId = pendingMemberId.trim()
-
-  await Promise.all([
-    db.collection("teams").doc(teamDocId).update({
-      pendingMemberIds: FieldValue.arrayRemove(normalizedPendingMemberId),
-      updatedAt: FieldValue.serverTimestamp(),
-    }),
-    db
-      .collection("participants")
-      .doc(normalizedPendingMemberId)
-      .collection("details")
-      .doc("application")
-      .set(
-        {
-          status: "started",
-          teamCode: "",
-          teamSelectionMode: "join",
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      ),
-  ])
-
-  console.log("[api/lib/teams] declinePendingMember complete", {
-    teamDocId,
-    pendingMemberId: normalizedPendingMemberId,
-    applicationStatus: "started",
-    teamCode: "",
-    teamSelectionMode: "join",
-  })
-}
-
 export async function leavePendingTeam(teamDocId: string, memberId: string): Promise<void> {
   console.log("[api/lib/teams] leavePendingTeam start", { teamDocId, memberId })
 
@@ -216,7 +198,6 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
   await Promise.all([
     db.collection("teams").doc(teamDocId).update({
       memberIds: FieldValue.arrayRemove(normalizedMemberId),
-      pendingMemberIds: FieldValue.arrayRemove(normalizedMemberId),
       updatedAt: FieldValue.serverTimestamp(),
     }),
     db
@@ -266,7 +247,6 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
   await Promise.all([
     db.collection("teams").doc(teamDocId).update({
       memberIds: FieldValue.arrayRemove(normalizedMemberId),
-      pendingMemberIds: FieldValue.arrayRemove(normalizedMemberId),
       updatedAt: FieldValue.serverTimestamp(),
     }),
     db
@@ -310,7 +290,6 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
     const teamData = teamSnapshot.data() as {
       leaderId?: unknown
       memberIds?: unknown
-      pendingMemberIds?: unknown
       status?: unknown
     }
 
@@ -338,25 +317,6 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
         return []
       }))]
       : []
-
-    const pendingMemberIds = Array.isArray(teamData?.pendingMemberIds)
-      ? [...new Set(teamData.pendingMemberIds.flatMap((memberId) => {
-        if (typeof memberId === "string") {
-          const normalizedMemberId = memberId.trim()
-          return normalizedMemberId.length > 0 ? [normalizedMemberId] : []
-        }
-
-        if (typeof memberId === "number" && Number.isFinite(memberId)) {
-          return [String(memberId)]
-        }
-
-        return []
-      }))]
-      : []
-
-    if (pendingMemberIds.length > 0) {
-      throw new Error("All pending team members must be approved or declined before team submission")
-    }
 
     for (const memberId of memberIds) {
       const applicationDocRef = db

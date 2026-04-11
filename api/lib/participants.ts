@@ -2,7 +2,6 @@ import { db } from "./firebase-admin.ts"
 
 type TeamMembershipRecord = {
   memberIds?: unknown
-  pendingMemberIds?: unknown
 }
 
 export type SharedParticipantProfile = {
@@ -43,16 +42,14 @@ const hasSharedTeamAccess = async (requesterUid: string, targetUid: string): Pro
 
   const requesterTeamSnapshots = await Promise.all([
     db.collection("teams").where("memberIds", "array-contains", requesterUid).get(),
-    db.collection("teams").where("pendingMemberIds", "array-contains", requesterUid).get(),
   ])
 
   for (const snapshot of requesterTeamSnapshots) {
     for (const teamDoc of snapshot.docs) {
       const data = teamDoc.data() as TeamMembershipRecord
       const memberIds = toStringArray(data.memberIds)
-      const pendingMemberIds = toStringArray(data.pendingMemberIds)
 
-      if (memberIds.includes(targetUid) || pendingMemberIds.includes(targetUid)) {
+      if (memberIds.includes(targetUid)) {
         return true
       }
     }

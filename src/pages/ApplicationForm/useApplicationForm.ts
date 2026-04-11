@@ -8,9 +8,7 @@ import {
 } from "@/lib/applicants"
 import { subscribeToParticipants, type Participant } from "@/lib/participants"
 import {
-  approvePendingMember,
   createPendingTeamFromApplication,
-  declinePendingMember,
   joinPendingTeamByCode,
   kickPendingTeamMember,
   leavePendingTeam,
@@ -47,7 +45,7 @@ export function useApplicationForm() {
   const [participantsById, setParticipantsById] = useState<Record<string, Participant>>({})
   const [applicantNamesById, setApplicantNamesById] = useState<Record<string, string>>({})
   const [applicantStatusesById, setApplicantStatusesById] = useState<Record<string, ApplicantStatus>>({})
-  const [isUpdatingPendingMembers, setIsUpdatingPendingMembers] = useState(false)
+  const [isUpdatingTeamMembers, setIsUpdatingTeamMembers] = useState(false)
   const [isLeavingTeam, setIsLeavingTeam] = useState(false)
   const hasInitializedFromApplicant = useRef(false)
   const lastPersistedFormRef = useRef<ApplicationFormState>(normalizeFormState(initialFormState))
@@ -93,29 +91,21 @@ export function useApplicationForm() {
     !!managedPendingTeam &&
     !!activeUserId &&
     managedPendingTeam.memberIds.includes(activeUserId)
-  const isManagedTeamPendingMember =
-    !!managedPendingTeam &&
-    !!activeUserId &&
-    managedPendingTeam.pendingMemberIds.includes(activeUserId)
   const isManagedTeamLeader =
     !!managedPendingTeam &&
     !!activeUserId &&
     managedPendingTeam.leaderId === activeUserId
-  const shouldShowTeamCard = hasCreatedPendingTeam || isManagedTeamMember || isManagedTeamPendingMember
-  const canLeaveManagedTeam =
-    (isManagedTeamMember || isManagedTeamPendingMember) &&
-    !isManagedTeamLeader
+  const shouldShowTeamCard = hasCreatedPendingTeam || isManagedTeamMember
+  const canLeaveManagedTeam = isManagedTeamMember && !isManagedTeamLeader
   const shouldShowJoinedMemberSubmitAction =
     (isManagedTeamMember || isManagedTeamLeader) && !isApplicationSubmitted
   const teamMemberIdsForCard = managedPendingTeam?.memberIds ?? (activeUserId ? [activeUserId] : [])
-  const pendingMemberIdsForCard = managedPendingTeam?.pendingMemberIds ?? []
-  const hasPendingTeamMembers = pendingMemberIdsForCard.length > 0
   const hasMultipleTeamMembers = teamMemberIdsForCard.length > 1
   const allOtherTeamMembersSubmitted = teamMemberIdsForCard
     .filter((memberId) => memberId !== activeUserId)
     .every((memberId) => applicantStatusesById[memberId] === "submitted")
   const canSubmitApplication = isManagedTeamLeader
-    ? hasMultipleTeamMembers && allOtherTeamMembersSubmitted && !hasPendingTeamMembers
+    ? hasMultipleTeamMembers && allOtherTeamMembersSubmitted
     : true
   const fallbackOwnName = `${form.prename.trim()} ${form.surname.trim()}`.trim()
   
@@ -143,8 +133,6 @@ export function useApplicationForm() {
   const teamMemberStatusesForCard = teamMemberIdsForCard.map((memberId) => {
     return applicantStatusesById[memberId] ?? "unknown"
   })
-  const pendingMemberNamesForCard = pendingMemberIdsForCard.map((memberId) => resolveMemberName(memberId))
-
   useEffect(() => {
     const unsubscribe = subscribeToParticipants(
       (participants) => {
@@ -164,7 +152,7 @@ export function useApplicationForm() {
   }, [])
 
   useEffect(() => {
-    const idsToResolve = [...new Set([...teamMemberIdsForCard, ...pendingMemberIdsForCard])].filter((memberId) => {
+    const idsToResolve = [...new Set(teamMemberIdsForCard)].filter((memberId) => {
       if (!memberId) {
         return false
       }
@@ -213,7 +201,7 @@ export function useApplicationForm() {
     return () => {
       isMounted = false
     }
-  }, [teamMemberIdsForCard, pendingMemberIdsForCard, participantsById, applicantNamesById, applicantStatusesById])
+  }, [teamMemberIdsForCard, participantsById, applicantNamesById, applicantStatusesById])
 
   useEffect(() => {
     if (!hasTeamCode) {
@@ -337,40 +325,6 @@ export function useApplicationForm() {
     await logout()
   }
 
-  const handleApprovePendingMember = async (memberId: string) => {
-    if (!managedPendingTeam) {
-      return
-    }
-
-    setError("")
-    setIsUpdatingPendingMembers(true)
-
-    try {
-      await approvePendingMember(managedPendingTeam.docId, memberId)
-    } catch {
-      setError("Could not approve pending member. Please try again.")
-    } finally {
-      setIsUpdatingPendingMembers(false)
-    }
-  }
-
-  const handleDeclinePendingMember = async (memberId: string) => {
-    if (!managedPendingTeam) {
-      return
-    }
-
-    setError("")
-    setIsUpdatingPendingMembers(true)
-
-    try {
-      await declinePendingMember(managedPendingTeam.docId, memberId)
-    } catch {
-      setError("Could not decline pending member. Please try again.")
-    } finally {
-      setIsUpdatingPendingMembers(false)
-    }
-  }
-
   const handleLeaveTeam = async () => {
     if (!managedPendingTeam || !activeUserId || !canLeaveManagedTeam) {
       return
@@ -421,14 +375,14 @@ export function useApplicationForm() {
     }
 
     setError("")
-    setIsUpdatingPendingMembers(true)
+    setIsUpdatingTeamMembers(true)
 
     try {
       await kickPendingTeamMember(managedPendingTeam.docId, memberId)
     } catch {
       setError("Could not remove team member. Please try again.")
     } finally {
-      setIsUpdatingPendingMembers(false)
+      setIsUpdatingTeamMembers(false)
     }
   }
 
@@ -634,11 +588,7 @@ export function useApplicationForm() {
     }
 
     if (!canSubmitApplication) {
-      if (hasPendingTeamMembers) {
-        setError("Please approve or decline all pending team members before submitting the team application.")
-      } else {
-        setError("All other team members must submit before you can submit the team application.")
-      }
+      setError("All other team members must submit before you can submit the team application.")
       return
     }
 
@@ -740,7 +690,7 @@ export function useApplicationForm() {
         const joined = await joinPendingTeamByCode(nextTeamCode, activeUserId)
         if (!joined) {
           setIsFinalizingStep3(false)
-          setError("No pending team found for this team code.")
+          setError("No team found for this team code.")
           return false
         }
       } catch {
@@ -828,7 +778,7 @@ export function useApplicationForm() {
     participantsById,
     applicantNamesById,
     applicantStatusesById,
-    isUpdatingPendingMembers,
+    isUpdatingTeamMembers,
     isLeavingTeam,
     lastPersistedFormRef,
     
@@ -840,7 +790,6 @@ export function useApplicationForm() {
     hasTeamCode,
     activeUserId,
     isManagedTeamMember,
-    isManagedTeamPendingMember,
     isManagedTeamLeader,
     shouldShowTeamCard,
     canLeaveManagedTeam,
@@ -849,17 +798,12 @@ export function useApplicationForm() {
     hasMultipleTeamMembers,
     allOtherTeamMembersSubmitted,
     canSubmitApplication,
-    pendingMemberIdsForCard,
-    hasPendingTeamMembers,
     teamMemberNamesForCard,
     teamMemberStatusesForCard,
-    pendingMemberNamesForCard,
     
     // Handlers
     updateField,
     handleLogout,
-    handleApprovePendingMember,
-    handleDeclinePendingMember,
     handleLeaveTeam,
     handleKickTeamMember,
     validateStep1,

@@ -18,15 +18,12 @@ interface Step3Props {
   canLeaveManagedTeam: boolean
   shouldShowJoinedMemberSubmitAction: boolean
   canSubmitApplication: boolean
-  isManagedTeamPendingMember: boolean
-  hasPendingTeamMembers: boolean
   
   managedPendingTeam: PendingTeamRecord | null
   activeUserId: string
   teamMemberNamesForCard: string[]
   teamMemberStatusesForCard: ApplicantStatus[]
   teamMemberIdsForCard: string[]
-  pendingMemberNamesForCard: string[]
   
   onUpdateField: (field: keyof ApplicationFormState, value: string) => void
   onPrevStep: () => void
@@ -36,10 +33,8 @@ interface Step3Props {
   onSubmitAsTeamMember: () => void
   onSubmitAsTeamLeader: () => void
   onKickMember?: (memberId: string) => Promise<void>
-  onApproveMember: (memberId: string) => Promise<void>
-  onDeclineMember: (memberId: string) => Promise<void>
   onLeaveTeam?: () => Promise<void>
-  isUpdatingPendingMembers: boolean
+  isUpdatingTeamMembers: boolean
   isLeavingTeam: boolean
 }
 
@@ -55,15 +50,12 @@ export function ApplicationFormStep3({
   canLeaveManagedTeam,
   shouldShowJoinedMemberSubmitAction,
   canSubmitApplication,
-  isManagedTeamPendingMember,
-  hasPendingTeamMembers,
   
   managedPendingTeam,
   activeUserId,
   teamMemberNamesForCard,
   teamMemberStatusesForCard,
   teamMemberIdsForCard,
-  pendingMemberNamesForCard,
   
   onUpdateField,
   onPrevStep,
@@ -73,10 +65,8 @@ export function ApplicationFormStep3({
   onSubmitAsTeamMember,
   onSubmitAsTeamLeader,
   onKickMember,
-  onApproveMember,
-  onDeclineMember,
   onLeaveTeam,
-  isUpdatingPendingMembers,
+  isUpdatingTeamMembers,
   isLeavingTeam,
 }: Step3Props) {
   const [createTeamName, setCreateTeamName] = useState("")
@@ -99,17 +89,10 @@ export function ApplicationFormStep3({
           currentUserId={activeUserId}
           status={managedPendingTeam?.status || "INITIAL"}
           teamCode={managedPendingTeam?.teamCode || form.teamCode}
-          showPendingMembers={isManagedTeamLeader || (hasCreatedPendingTeam && !managedPendingTeam)}
-          pendingMemberIds={managedPendingTeam?.pendingMemberIds || []}
-          pendingMemberNames={pendingMemberNamesForCard}
           onKickTeamMember={isManagedTeamLeader ? onKickMember : undefined}
-          isUpdatingTeamMembers={isUpdatingPendingMembers}
-          onApprovePendingMember={onApproveMember}
-          onDeclinePendingMember={onDeclineMember}
-          isUpdatingPendingMembers={isUpdatingPendingMembers}
+          isUpdatingTeamMembers={isUpdatingTeamMembers}
           onLeaveTeam={canLeaveManagedTeam ? onLeaveTeam : undefined}
           isLeavingTeam={isLeavingTeam}
-          showPendingApprovalRemark={isManagedTeamPendingMember}
         />
       ) : shouldHideTeamSelectionAfterIndividualSubmit ? (
         <p className="text-sm text-muted-foreground text-center">
@@ -172,11 +155,6 @@ export function ApplicationFormStep3({
       )}
 
       {error && <p className="text-sm text-red-400 text-center">{error}</p>}
-      {!isApplicationSubmitted && isManagedTeamLeader && hasPendingTeamMembers && (
-        <p className="text-sm text-amber-300 text-center">
-          Team submission is blocked while members are still pending. Please approve or decline all pending members.
-        </p>
-      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Button type="button" variant="outline" className="w-full" onClick={onPrevStep}>
           Back
@@ -194,45 +172,43 @@ export function ApplicationFormStep3({
                 {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Application"}
               </Button>
             ) : (
-              !isManagedTeamPendingMember && (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={isFinalizingStep3 || hasCreatedPendingTeam}
-                    onClick={onProceedWithoutTeam}
-                  >
-                    {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Without Team"}
-                  </Button>
-                  <Button
-                    type="button"
-                    className="w-full"
-                    disabled={
-                      hasCreatedPendingTeam ||
-                      isFinalizingStep3 ||
-                      (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
-                      (form.teamSelectionMode === "create" &&
-                        (!isNonEmpty(createTeamName) ||
-                          !isNonEmpty(createTeamDescription)))
-                    }
-                    onClick={
-                      form.teamSelectionMode === "create"
-                        ? () => onCreateTeam({
-                          name: createTeamName,
-                          description: createTeamDescription,
-                        })
-                        : onJoinTeam
-                    }
-                  >
-                    {isFinalizingStep3
-                      ? "Saving..."
-                      : form.teamSelectionMode === "create"
-                        ? "Create New Team"
-                        : "Join Team with Code"}
-                  </Button>
-                </>
-              )
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isFinalizingStep3 || hasCreatedPendingTeam}
+                  onClick={onProceedWithoutTeam}
+                >
+                  {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Without Team"}
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={
+                    hasCreatedPendingTeam ||
+                    isFinalizingStep3 ||
+                    (form.teamSelectionMode === "join" && !isNonEmpty(form.teamCode)) ||
+                    (form.teamSelectionMode === "create" &&
+                      (!isNonEmpty(createTeamName) ||
+                        !isNonEmpty(createTeamDescription)))
+                  }
+                  onClick={
+                    form.teamSelectionMode === "create"
+                      ? () => onCreateTeam({
+                        name: createTeamName,
+                        description: createTeamDescription,
+                      })
+                      : onJoinTeam
+                  }
+                >
+                  {isFinalizingStep3
+                    ? "Saving..."
+                    : form.teamSelectionMode === "create"
+                      ? "Create New Team"
+                      : "Join Team with Code"}
+                </Button>
+              </>
             )}
           </>
         )}

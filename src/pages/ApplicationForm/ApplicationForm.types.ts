@@ -128,7 +128,7 @@ export type ApplicationFormContextType = {
   participantsById: Record<string, Participant>
   applicantNamesById: Record<string, string>
   applicantStatusesById: Record<string, ApplicantStatus>
-  isUpdatingPendingMembers: boolean
+  isUpdatingTeamMembers: boolean
   isLeavingTeam: boolean
   lastPersistedFormRef: React.MutableRefObject<ApplicationFormState>
   
@@ -148,16 +148,12 @@ export type ApplicationFormContextType = {
   hasMultipleTeamMembers: boolean
   allOtherTeamMembersSubmitted: boolean
   canSubmitApplication: boolean
-  pendingMemberIdsForCard: string[]
   teamMemberNamesForCard: string[]
   teamMemberStatusesForCard: ApplicantStatus[]
-  pendingMemberNamesForCard: string[]
   
   // Handlers
   updateField: (field: keyof ApplicationFormState, value: string) => void
   handleLogout: () => Promise<void>
-  handleApprovePendingMember: (memberId: string) => Promise<void>
-  handleDeclinePendingMember: (memberId: string) => Promise<void>
   handleLeaveTeam: () => Promise<void>
   handleKickTeamMember: (memberId: string) => Promise<void>
   validateStep1: () => boolean

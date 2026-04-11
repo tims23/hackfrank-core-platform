@@ -3,8 +3,6 @@ import { withAuth } from "./lib/auth-middleware.ts"
 import {
   createPendingTeamFromApplication,
   joinPendingTeamByCode,
-  approvePendingMember,
-  declinePendingMember,
   leavePendingTeam,
   kickPendingTeamMember,
   submitPendingTeamApplication,
@@ -38,7 +36,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
           return
         }
 
-        console.log("[api/teams] Creating pending team", { uid })
+        console.log("[api/teams] Creating team", { uid })
         let result: { teamCode: string }
         try {
           result = await createPendingTeamFromApplication(uid, name, description)
@@ -51,7 +49,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
 
           throw error
         }
-        console.log("[api/teams] Pending team created", { uid, teamCode: result.teamCode })
+        console.log("[api/teams] Team created", { uid, teamCode: result.teamCode })
         res.status(200).json(result)
         return
       }
@@ -83,46 +81,6 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         return
       }
 
-      case "approve-member": {
-        const { teamDocId, memberId } = data as { teamDocId: string; memberId: string }
-
-        if (!teamDocId || !memberId) {
-          console.warn("[api/teams] approve-member validation failed", {
-            uid,
-            hasTeamDocId: Boolean(teamDocId),
-            hasMemberId: Boolean(memberId),
-          })
-          res.status(400).json({ error: "Missing required fields" })
-          return
-        }
-
-        console.log("[api/teams] Approving pending member", { uid, teamDocId, memberId })
-        await approvePendingMember(teamDocId, memberId)
-        console.log("[api/teams] Pending member approved", { uid, teamDocId, memberId })
-        res.status(200).json({ success: true })
-        return
-      }
-
-      case "decline-member": {
-        const { teamDocId, memberId } = data as { teamDocId: string; memberId: string }
-
-        if (!teamDocId || !memberId) {
-          console.warn("[api/teams] decline-member validation failed", {
-            uid,
-            hasTeamDocId: Boolean(teamDocId),
-            hasMemberId: Boolean(memberId),
-          })
-          res.status(400).json({ error: "Missing required fields" })
-          return
-        }
-
-        console.log("[api/teams] Declining pending member", { uid, teamDocId, memberId })
-        await declinePendingMember(teamDocId, memberId)
-        console.log("[api/teams] Pending member declined", { uid, teamDocId, memberId })
-        res.status(200).json({ success: true })
-        return
-      }
-
       case "leave": {
         const { teamDocId } = data as { teamDocId: string }
 
@@ -132,9 +90,9 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
           return
         }
 
-        console.log("[api/teams] Leaving pending team", { uid, teamDocId })
+        console.log("[api/teams] Leaving team", { uid, teamDocId })
         await leavePendingTeam(teamDocId, uid)
-        console.log("[api/teams] Left pending team", { uid, teamDocId })
+        console.log("[api/teams] Left team", { uid, teamDocId })
         res.status(200).json({ success: true })
         return
       }
