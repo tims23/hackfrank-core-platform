@@ -603,10 +603,10 @@ export function useApplicationForm() {
     setStep(3)
   }
 
-  const handleSubmitApplicationAsTeamMember = async () => {
+  const submitIndividualApplication = async (applicationToSubmit: ApplicationFormState) => {
     setError("")
     setIsSubmitting(true)
-    const submitted = await submitApplication(form)
+    const submitted = await submitApplication(applicationToSubmit)
     setIsSubmitting(false)
 
     if (!submitted) {
@@ -622,6 +622,10 @@ export function useApplicationForm() {
         [activeUserId]: "submitted",
       }))
     }
+  }
+
+  const handleSubmitApplicationAsTeamMember = async () => {
+    await submitIndividualApplication(form)
   }
 
   const handleSubmitApplicationAsTeamLeader = async () => {
@@ -671,31 +675,31 @@ export function useApplicationForm() {
   }
 
   const handleCompleteStep3 = async (
-    mode: "join" | "create" | "skip",
+    mode: "join" | "create" | "INDIVIDUAL",
     createTeamDraft?: CreateTeamDraft,
-  ) => {
+  ): Promise<boolean> => {
     setError("")
 
     if (mode === "join" && !form.teamCode.trim()) {
       setError("Please enter a team code or proceed without a team.")
-      return
+      return false
     }
 
     if (mode === "create" && !createTeamDraft?.name.trim()) {
       setError("Please enter a team name or proceed without a team.")
-      return
+      return false
     }
 
     if (mode === "create" && !createTeamDraft?.description.trim()) {
       setError("Please enter a team description or proceed without a team.")
-      return
+      return false
     }
 
     if (mode === "create") {
       const parsedMaxMembers = Number.parseInt(createTeamDraft?.maxMembers ?? "", 10)
       if (!Number.isFinite(parsedMaxMembers) || parsedMaxMembers < 2 || parsedMaxMembers > 4) {
         setError("Max members must be a number between 2 and 4.")
-        return
+        return false
       }
     }
 
@@ -729,7 +733,7 @@ export function useApplicationForm() {
       normalizedCurrent.teamCode === lastPersistedFormRef.current.teamCode &&
       normalizedCurrent.teamSelectionMode === lastPersistedFormRef.current.teamSelectionMode
     ) {
-      return
+      return true
     }
 
     setIsFinalizingStep3(true)
@@ -739,7 +743,7 @@ export function useApplicationForm() {
       if (!activeUserId) {
         setIsFinalizingStep3(false)
         setError("Could not determine current user for team join.")
-        return
+        return false
       }
 
       try {
@@ -747,12 +751,12 @@ export function useApplicationForm() {
         if (!joined) {
           setIsFinalizingStep3(false)
           setError("No pending team found for this team code.")
-          return
+          return false
         }
       } catch {
         setIsFinalizingStep3(false)
         setError("Could not join team. Please try again.")
-        return
+        return false
       }
     }
 
@@ -761,7 +765,7 @@ export function useApplicationForm() {
       if (!activeUserId) {
         setIsFinalizingStep3(false)
         setError("Could not determine current user for team creation.")
-        return
+        return false
       }
 
       const parsedMaxMembers = Number.parseInt(nextNewTeamMaxMembers || "", 10)
@@ -786,7 +790,7 @@ export function useApplicationForm() {
       } catch {
         setIsFinalizingStep3(false)
         setError("Could not create team. Please try again.")
-        return
+        return false
       }
     }
 
@@ -798,10 +802,26 @@ export function useApplicationForm() {
 
     if (!synced) {
       setError("Could not save step 3. Please try again.")
-      return
+      return false
     }
 
     lastPersistedFormRef.current = normalizedCurrent
+    return true
+  }
+
+  const handleProceedWithoutTeam = async () => {
+    const submissionForm = normalizeFormState({
+      ...form,
+      teamCode: "",
+      teamSelectionMode: "INDIVIDUAL",
+    })
+
+    const finalized = await handleCompleteStep3("INDIVIDUAL")
+    if (!finalized) {
+      return
+    }
+
+    await submitIndividualApplication(submissionForm)
   }
 
   return {
@@ -861,6 +881,7 @@ export function useApplicationForm() {
     handleStepNavigation,
     handleSubmitStep2,
     handleSubmitApplicationAsTeamMember,
+    handleProceedWithoutTeam,
     handleSubmitApplicationAsTeamLeader,
     handleCompleteStep3,
     handleStep2FieldBlur,

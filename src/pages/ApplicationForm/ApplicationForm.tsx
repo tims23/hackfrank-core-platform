@@ -8,6 +8,17 @@ import { ApplicationFormStep3 } from "./ApplicationFormStep3"
 
 export function ApplicationForm() {
   const form = useApplicationForm()
+  const shouldShowReviewBanner = form.isApplicationSubmitted
+  const shouldShowTeamMemberWaitingBanner =
+    form.isApplicationSubmitted &&
+    form.isManagedTeamMember &&
+    !form.isManagedTeamLeader &&
+    form.managedPendingTeam?.status === "INITIAL"
+  const reviewBannerMessage = shouldShowTeamMemberWaitingBanner
+    ? "You have finished your part. Your team leader still needs to submit the team application."
+    : form.form.teamSelectionMode === "INDIVIDUAL"
+      ? "Your individual application was submitted and is currently under review."
+      : "Your team application was submitted and is currently under review."
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
@@ -27,6 +38,12 @@ export function ApplicationForm() {
           <p className="text-sm text-muted-foreground mb-6 text-center">
             Complete your details to submit your application.
           </p>
+
+          {shouldShowReviewBanner && (
+            <div className="mb-6 rounded-lg border border-amber-400/40 bg-amber-400/10 px-4 py-3">
+              <p className="text-sm text-amber-100 text-center">{reviewBannerMessage}</p>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
             {steps.map((currentStep) => {
@@ -122,7 +139,7 @@ export function ApplicationForm() {
                 
                 onUpdateField={form.updateField}
                 onPrevStep={() => form.setStep(2)}
-                onProceedWithoutTeam={() => form.handleCompleteStep3("skip")}
+                onProceedWithoutTeam={form.handleProceedWithoutTeam}
                 onJoinTeam={() => form.handleCompleteStep3("join")}
                 onCreateTeam={(createTeamDraft) => form.handleCompleteStep3("create", createTeamDraft)}
                 onSubmitAsTeamMember={form.handleSubmitApplicationAsTeamMember}

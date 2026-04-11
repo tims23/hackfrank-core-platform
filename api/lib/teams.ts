@@ -31,6 +31,38 @@ export class SubmittedTeamMutationError extends Error {
   }
 }
 
+export class TeamSelectionLockedError extends Error {
+  constructor() {
+    super("Team creation/join is not allowed for applicants who submitted individually or already submitted")
+    this.name = "TeamSelectionLockedError"
+  }
+}
+
+const getParticipantApplicationDocRef = (uid: string) =>
+  db.collection("participants").doc(uid).collection("details").doc("application")
+
+const assertTeamSelectionOpen = async (applicantId: string): Promise<void> => {
+  const normalizedApplicantId = applicantId.trim()
+
+  const applicationSnapshot = await getParticipantApplicationDocRef(normalizedApplicantId).get()
+  const applicationData = applicationSnapshot.data() as {
+    status?: unknown
+    teamSelectionMode?: unknown
+  } | undefined
+
+  const applicationStatus = applicationData?.status === "submitted" ? "submitted" : "started"
+  const teamSelectionMode =
+    applicationData?.teamSelectionMode === "create"
+      ? "create"
+      : applicationData?.teamSelectionMode === "INDIVIDUAL"
+        ? "INDIVIDUAL"
+        : "join"
+
+  if (applicationStatus === "submitted" || teamSelectionMode === "INDIVIDUAL") {
+    throw new TeamSelectionLockedError()
+  }
+}
+
 export async function createPendingTeamFromApplication(
   leaderId: string,
   name: string,
@@ -46,6 +78,8 @@ export async function createPendingTeamFromApplication(
   const normalizedDescription = description.trim()
   const normalizedMaxMembers = Math.max(2, Math.min(4, maxMembers))
   const teamCode = generateTeamCode()
+
+  await assertTeamSelectionOpen(leaderId)
 
   await db.collection("teams").add({
     id: Date.now(),
@@ -84,6 +118,8 @@ export async function joinPendingTeamByCode(
 
   const normalizedTeamCode = teamCode.trim().toUpperCase()
   const normalizedApplicantId = applicantId.trim()
+
+  await assertTeamSelectionOpen(normalizedApplicantId)
 
   if (!normalizedTeamCode || !normalizedApplicantId) {
     console.warn("[api/lib/teams] joinPendingTeamByCode rejected invalid input", {

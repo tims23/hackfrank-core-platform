@@ -17,7 +17,7 @@ export type ApplicantFormInput = {
   generalSkills: string
   hackathonsAttended: string
   teamCode: string
-  teamSelectionMode: "join" | "create" | "skip"
+  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
 }
 
 export type ApplicantRecord = ApplicantFormInput & {
@@ -63,6 +63,18 @@ const parseHackathonsAttended = (value: unknown): string => {
   }
 
   return ""
+}
+
+const normalizeTeamSelectionMode = (value: unknown): "join" | "create" | "INDIVIDUAL" => {
+  if (value === "create") {
+    return "create"
+  }
+
+  if (value === "INDIVIDUAL") {
+    return "INDIVIDUAL"
+  }
+
+  return "join"
 }
 
 export async function fetchApplicantFormData(uid: string): Promise<ApplicantRecord | null> {
@@ -130,10 +142,7 @@ export async function fetchApplicantFormData(uid: string): Promise<ApplicantReco
     generalSkills,
     hackathonsAttended: parseHackathonsAttended(applicationData?.hackathonsAttended),
     teamCode: typeof applicationData?.teamCode === "string" ? applicationData.teamCode : "",
-    teamSelectionMode:
-      applicationData?.teamSelectionMode === "create" || applicationData?.teamSelectionMode === "skip"
-        ? applicationData.teamSelectionMode
-        : "join",
+    teamSelectionMode: normalizeTeamSelectionMode(applicationData?.teamSelectionMode),
     skills,
   }
 
@@ -156,6 +165,7 @@ export async function submitApplicantForm(
     .split(",")
     .map((skill) => skill.trim())
     .filter((skill) => skill.length > 0)
+  const teamSelectionMode = normalizeTeamSelectionMode(applicant.teamSelectionMode)
 
   const hackathonsAttended = Number.parseInt(applicant.hackathonsAttended, 10)
   await Promise.all([
@@ -168,7 +178,7 @@ export async function submitApplicantForm(
       programmingSkillLevel: applicant.programmingSkillLevel,
       hackathonsAttended: Number.isFinite(hackathonsAttended) ? hackathonsAttended : 0,
       teamCode: applicant.teamCode,
-      teamSelectionMode: applicant.teamSelectionMode,
+      teamSelectionMode,
       status: "submitted",
       submittedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -231,6 +241,8 @@ export async function syncApplicantDraft(
       if (Number.isFinite(parsed)) {
         payload.hackathonsAttended = Math.max(0, parsed)
       }
+    } else if (key === "teamSelectionMode") {
+      payload.teamSelectionMode = normalizeTeamSelectionMode(value)
     } else {
       payload[key] = value
     }

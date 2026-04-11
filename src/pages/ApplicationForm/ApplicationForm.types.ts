@@ -16,7 +16,7 @@ export type ApplicationFormState = {
   generalSkills: string
   hackathonsAttended: string
   teamCode: string
-  teamSelectionMode: "join" | "create" | "skip"
+  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
 }
 
 export type CreateTeamDraft = {
@@ -167,6 +167,7 @@ export type ApplicationFormContextType = {
   handleStepNavigation: (targetStep: 1 | 2 | 3) => Promise<void>
   handleSubmitStep2: () => Promise<void>
   handleSubmitApplicationAsTeamMember: () => Promise<void>
-  handleCompleteStep3: (mode: "join" | "create" | "skip", createTeamDraft?: CreateTeamDraft) => Promise<void>
+  handleProceedWithoutTeam: () => Promise<void>
+  handleCompleteStep3: (mode: "join" | "create" | "INDIVIDUAL", createTeamDraft?: CreateTeamDraft) => Promise<boolean>
   handleStep2FieldBlur: (field: Step2Field) => Promise<void>
 }

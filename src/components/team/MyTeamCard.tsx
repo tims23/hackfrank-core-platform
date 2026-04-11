@@ -1,6 +1,22 @@
 import { Users, Briefcase } from "lucide-react"
 import { Badge } from "@/components/ui"
 
+function formatTeamStatus(status: string) {
+  if (status === "INITIAL") {
+    return "Draft"
+  }
+
+  if (status === "APPLICATION_SUBMITTED") {
+    return "Application submitted"
+  }
+
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
 type MyTeamCardProps = {
   teamName: string
   description: string
@@ -101,7 +117,7 @@ export function MyTeamCard({
 
             {status && (
               <Badge className="bg-secondary/40 text-foreground/70 border-border/20">
-                {status}
+                {formatTeamStatus(status)}
               </Badge>
             )}
 

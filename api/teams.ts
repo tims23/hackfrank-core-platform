@@ -10,6 +10,7 @@ import {
   submitPendingTeamApplication,
   SubmittedApplicationLeaveError,
   SubmittedTeamMutationError,
+  TeamSelectionLockedError,
 } from "./lib/teams.ts"
 
 export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: string) => {
@@ -41,7 +42,18 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         }
 
         console.log("[api/teams] Creating pending team", { uid, maxMembers })
-        const result = await createPendingTeamFromApplication(uid, name, description, maxMembers)
+        let result: { teamCode: string }
+        try {
+          result = await createPendingTeamFromApplication(uid, name, description, maxMembers)
+        } catch (error) {
+          if (error instanceof TeamSelectionLockedError) {
+            console.warn("[api/teams] Create blocked by applicant team-selection lock", { uid })
+            res.status(403).json({ error: error.message })
+            return
+          }
+
+          throw error
+        }
         console.log("[api/teams] Pending team created", { uid, teamCode: result.teamCode })
         res.status(200).json(result)
         return
@@ -57,7 +69,18 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, uid: str
         }
 
         console.log("[api/teams] Attempting team join", { uid, teamCode })
-        const joined = await joinPendingTeamByCode(teamCode, uid)
+        let joined = false
+        try {
+          joined = await joinPendingTeamByCode(teamCode, uid)
+        } catch (error) {
+          if (error instanceof TeamSelectionLockedError) {
+            console.warn("[api/teams] Join blocked by applicant team-selection lock", { uid, teamCode })
+            res.status(403).json({ error: error.message })
+            return
+          }
+
+          throw error
+        }
         console.log("[api/teams] Team join result", { uid, teamCode, joined })
         res.status(200).json({ joined })
         return

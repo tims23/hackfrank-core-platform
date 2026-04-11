@@ -30,7 +30,7 @@ interface Step3Props {
   
   onUpdateField: (field: keyof ApplicationFormState, value: string) => void
   onPrevStep: () => void
-  onProceedWithoutTeam: () => void
+  onProceedWithoutTeam: () => Promise<void>
   onJoinTeam: () => void
   onCreateTeam: (createTeamDraft: CreateTeamDraft) => void
   onSubmitAsTeamMember: () => void
@@ -83,6 +83,8 @@ export function ApplicationFormStep3({
   const [createTeamDescription, setCreateTeamDescription] = useState("")
   const [createTeamMaxMembers, setCreateTeamMaxMembers] = useState("")
   const parsedCreateTeamMaxMembers = Number.parseInt(createTeamMaxMembers, 10)
+  const shouldHideTeamSelectionAfterIndividualSubmit =
+    isApplicationSubmitted && form.teamSelectionMode === "INDIVIDUAL" && !shouldShowTeamCard
 
   return (
     <>
@@ -111,6 +113,10 @@ export function ApplicationFormStep3({
           isLeavingTeam={isLeavingTeam}
           showPendingApprovalRemark={isManagedTeamPendingMember}
         />
+      ) : shouldHideTeamSelectionAfterIndividualSubmit ? (
+        <p className="text-sm text-muted-foreground text-center">
+          You submitted as an individual participant.
+        </p>
       ) : (
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">Team Code (Optional)</label>
@@ -209,7 +215,7 @@ export function ApplicationFormStep3({
                     disabled={isFinalizingStep3 || hasCreatedPendingTeam}
                     onClick={onProceedWithoutTeam}
                   >
-                    {isFinalizingStep3 ? "Saving..." : "Proceed Without Team"}
+                    {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Without Team"}
                   </Button>
                   <Button
                     type="button"

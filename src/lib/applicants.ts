@@ -20,7 +20,7 @@ export type ApplicantRecord = {
   skills?: string[]
   hackathonsAttended?: number
   teamCode?: string
-  teamSelectionMode?: "join" | "create" | "skip"
+  teamSelectionMode?: "join" | "create" | "INDIVIDUAL"
 }
 
 export type ApplicantFormInput = {
@@ -37,7 +37,7 @@ export type ApplicantFormInput = {
   generalSkills: string
   hackathonsAttended: string
   teamCode: string
-  teamSelectionMode: "join" | "create" | "skip"
+  teamSelectionMode: "join" | "create" | "INDIVIDUAL"
 }
 
 export type ApplicantFormResponse = {
@@ -86,7 +86,7 @@ export const fetchApplicantFormData = async (
     hackathonsAttended:
       application?.hackathonsAttended !== undefined ? String(application.hackathonsAttended) : "",
     teamCode: application?.teamCode ?? "",
-    teamSelectionMode: application?.teamSelectionMode ?? "join",
+    teamSelectionMode: normalizeTeamSelectionMode(application?.teamSelectionMode),
   }
 }
 
@@ -103,6 +103,18 @@ const readApplicantNumber = (value: unknown): number | null =>
 
 const getParticipantApplicationDocRef = (uid: string) =>
   doc(firestoreDb, "participants", uid, "details", "application")
+
+const normalizeTeamSelectionMode = (value: unknown): "join" | "create" | "INDIVIDUAL" => {
+  if (value === "create") {
+    return "create"
+  }
+
+  if (value === "INDIVIDUAL") {
+    return "INDIVIDUAL"
+  }
+
+  return "join"
+}
 
 type SharedParticipantProfileResponse = {
   success: boolean
@@ -292,10 +304,7 @@ export const subscribeToApplicantFormData = (
             ? String(readApplicantNumber(data.hackathonsAttended))
             : "",
         teamCode: readApplicantString(data.teamCode),
-        teamSelectionMode:
-          data.teamSelectionMode === "create" || data.teamSelectionMode === "skip"
-            ? data.teamSelectionMode
-            : "join",
+        teamSelectionMode: normalizeTeamSelectionMode(data.teamSelectionMode),
       })
     },
     (snapshotError) => {
