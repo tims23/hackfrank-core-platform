@@ -11,7 +11,11 @@ import {
   APPLICANT_STATUS_SUBMITTED,
   DEFAULT_TEAM_SELECTION_MODE,
   normalizeApplicantStatus,
+  normalizeTeamStatus,
   normalizeTeamSelectionMode,
+  TEAM_SELECTION_MODE_INDIVIDUAL,
+  TEAM_STATUS_APPLICATION_SUBMITTED,
+  TEAM_STATUS_INITIAL,
 } from "../../shared/types.ts"
 
 export type {
@@ -27,6 +31,24 @@ const getParticipantApplicationDocRef = (uid: string) =>
 
 const getParticipantProfileDocRef = (uid: string) =>
   db.collection("participants").doc(uid).collection("details").doc("profile")
+
+const TEAM_MAX_MEMBERS = 4
+
+const normalizeMemberIds = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? [...new Set(value.flatMap((entry) => {
+      if (typeof entry === "string") {
+        const normalized = entry.trim()
+        return normalized.length > 0 ? [normalized] : []
+      }
+
+      if (typeof entry === "number" && Number.isFinite(entry)) {
+        return [String(entry)]
+      }
+
+      return []
+    }))]
+    : []
 
 const parseSkills = (value: unknown): string[] =>
   Array.isArray(value)
@@ -50,6 +72,81 @@ const parseHackathonsAttended = (value: unknown): string => {
   }
 
   return ""
+}
+
+const tryAutoSubmitFullTeamApplication = async (submitterId: string, teamCode: string): Promise<void> => {
+  const normalizedSubmitterId = submitterId.trim()
+  const normalizedTeamCode = teamCode.trim().toUpperCase()
+
+  if (!normalizedSubmitterId || !normalizedTeamCode) {
+    return
+  }
+
+  const teamsSnapshot = await db
+    .collection("teams")
+    .where("teamCode", "==", normalizedTeamCode)
+    .limit(1)
+    .get()
+
+  const teamDoc = teamsSnapshot.docs[0]
+  if (!teamDoc) {
+    return
+  }
+
+  await db.runTransaction(async (transaction) => {
+    const freshTeamSnapshot = await transaction.get(teamDoc.ref)
+    if (!freshTeamSnapshot.exists) {
+      return
+    }
+
+    const teamData = freshTeamSnapshot.data() as {
+      memberIds?: unknown
+      status?: unknown
+      teamCode?: unknown
+    } | undefined
+
+    const teamStatus = normalizeTeamStatus(teamData?.status)
+    if (teamStatus === TEAM_STATUS_APPLICATION_SUBMITTED) {
+      return
+    }
+
+    if (teamStatus !== TEAM_STATUS_INITIAL) {
+      return
+    }
+
+    const memberIds = normalizeMemberIds(teamData?.memberIds)
+    if (memberIds.length !== TEAM_MAX_MEMBERS) {
+      return
+    }
+
+    if (!memberIds.includes(normalizedSubmitterId)) {
+      return
+    }
+
+    for (const memberId of memberIds) {
+      const memberApplicationRef = getParticipantApplicationDocRef(memberId)
+      const memberApplicationSnapshot = await transaction.get(memberApplicationRef)
+      const memberApplicationData = memberApplicationSnapshot.data() as { status?: unknown } | undefined
+      const memberStatus = normalizeApplicantStatus(memberApplicationData?.status)
+
+      if (memberStatus !== APPLICANT_STATUS_SUBMITTED) {
+        return
+      }
+    }
+
+    transaction.update(freshTeamSnapshot.ref, {
+      status: TEAM_STATUS_APPLICATION_SUBMITTED,
+      submittedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    console.log("[api/lib/applicants] auto-submitted full team application", {
+      submitterId: normalizedSubmitterId,
+      teamCode: normalizedTeamCode,
+      teamDocId: freshTeamSnapshot.id,
+      memberCount: memberIds.length,
+    })
+  })
 }
 
 export async function fetchApplicantFormData(uid: string): Promise<ApplicantRecord | null> {
@@ -168,6 +265,10 @@ export async function submitApplicantForm(
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true }),
   ])
+
+  if (teamSelectionMode !== TEAM_SELECTION_MODE_INDIVIDUAL && applicant.teamCode.trim()) {
+    await tryAutoSubmitFullTeamApplication(uid, applicant.teamCode)
+  }
 
   console.log("[api/lib/applicants] submitApplicantForm complete", {
     uid,

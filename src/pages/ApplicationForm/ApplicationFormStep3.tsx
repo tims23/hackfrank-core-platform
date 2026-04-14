@@ -24,6 +24,8 @@ interface Step3Props {
   canLeaveManagedTeam: boolean
   shouldShowJoinedMemberSubmitAction: boolean
   canSubmitApplication: boolean
+  shouldShowLeaderTeamSubmitAction: boolean
+  canSubmitTeamApplication: boolean
   
   managedPendingTeam: PendingTeamRecord | null
   activeUserId: string
@@ -38,6 +40,7 @@ interface Step3Props {
   onCreateTeam: (createTeamDraft: CreateTeamDraft) => void
   onSubmitAsTeamMember: () => void
   onSubmitAsTeamLeader: () => void
+  onSubmitTeamAsTeamLeader: () => void
   onKickMember?: (memberId: string) => Promise<void>
   onLeaveTeam?: () => Promise<void>
   isUpdatingTeamMembers: boolean
@@ -56,6 +59,8 @@ export function ApplicationFormStep3({
   canLeaveManagedTeam,
   shouldShowJoinedMemberSubmitAction,
   canSubmitApplication,
+  shouldShowLeaderTeamSubmitAction,
+  canSubmitTeamApplication,
   
   managedPendingTeam,
   activeUserId,
@@ -70,6 +75,7 @@ export function ApplicationFormStep3({
   onCreateTeam,
   onSubmitAsTeamMember,
   onSubmitAsTeamLeader,
+  onSubmitTeamAsTeamLeader,
   onKickMember,
   onLeaveTeam,
   isUpdatingTeamMembers,
@@ -166,7 +172,28 @@ export function ApplicationFormStep3({
           Back
         </Button>
 
-        {!isApplicationSubmitted && (
+        {shouldShowLeaderTeamSubmitAction ? (
+          <>
+            {!isApplicationSubmitted && (
+              <Button
+                type="button"
+                className="w-full"
+                disabled={isFinalizingStep3 || isSubmitting || !canSubmitApplication}
+                onClick={onSubmitAsTeamLeader}
+              >
+                {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Personal Application"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              className="w-full md:col-span-2"
+              disabled={isFinalizingStep3 || isSubmitting || !canSubmitTeamApplication}
+              onClick={onSubmitTeamAsTeamLeader}
+            >
+              {isFinalizingStep3 || isSubmitting ? "Saving..." : "Submit Team Application"}
+            </Button>
+          </>
+        ) : !isApplicationSubmitted ? (
           <>
             {shouldShowJoinedMemberSubmitAction ? (
               <Button
@@ -217,7 +244,7 @@ export function ApplicationFormStep3({
               </>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </>
   )

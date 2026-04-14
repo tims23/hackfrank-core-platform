@@ -20,8 +20,14 @@ export function ApplicationForm() {
     form.isManagedTeamMember &&
     !form.isManagedTeamLeader &&
     form.managedPendingTeam?.status === TEAM_STATUS_INITIAL
+  const shouldShowTeamLeaderWaitingBanner =
+    form.isApplicationSubmitted &&
+    form.isManagedTeamLeader &&
+    form.managedPendingTeam?.status === TEAM_STATUS_INITIAL
   const reviewBannerMessage = shouldShowTeamMemberWaitingBanner
     ? "You have finished your part. Your team leader still needs to submit the team application."
+    : shouldShowTeamLeaderWaitingBanner
+      ? "Your personal application was submitted. Submit the team application once all members have submitted their personal applications."
     : form.form.teamSelectionMode === TEAM_SELECTION_MODE_INDIVIDUAL
       ? "Your individual application was submitted and is currently under review."
       : "Your team application was submitted and is currently under review."
@@ -133,6 +139,8 @@ export function ApplicationForm() {
                 canLeaveManagedTeam={form.canLeaveManagedTeam}
                 shouldShowJoinedMemberSubmitAction={form.shouldShowJoinedMemberSubmitAction}
                 canSubmitApplication={form.canSubmitApplication}
+                shouldShowLeaderTeamSubmitAction={form.shouldShowLeaderTeamSubmitAction}
+                canSubmitTeamApplication={form.canSubmitTeamApplication}
                 
                 managedPendingTeam={form.managedPendingTeam}
                 activeUserId={form.activeUserId}
@@ -147,6 +155,7 @@ export function ApplicationForm() {
                 onCreateTeam={(createTeamDraft) => form.handleCompleteStep3(TEAM_SELECTION_MODE_CREATE, createTeamDraft)}
                 onSubmitAsTeamMember={form.handleSubmitApplicationAsTeamMember}
                 onSubmitAsTeamLeader={form.handleSubmitApplicationAsTeamLeader}
+                onSubmitTeamAsTeamLeader={form.handleSubmitTeamApplicationAsTeamLeader}
                 onKickMember={
                   form.isManagedTeamLeader && form.managedPendingTeam?.status === TEAM_STATUS_INITIAL
                     ? form.handleKickTeamMember

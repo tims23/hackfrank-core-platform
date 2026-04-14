@@ -12,6 +12,7 @@ import {
   TEAM_SELECTION_MODE_CREATE,
   TEAM_SELECTION_MODE_INDIVIDUAL,
   TEAM_SELECTION_MODE_JOIN,
+  TEAM_STATUS_INITIAL,
   type TeamSelectionMode,
 } from "../../../shared/types"
 import { subscribeToParticipants, type Participant } from "@/lib/participants"
@@ -107,14 +108,19 @@ export function useApplicationForm() {
   const canLeaveManagedTeam = isManagedTeamMember && !isManagedTeamLeader
   const shouldShowJoinedMemberSubmitAction =
     (isManagedTeamMember || isManagedTeamLeader) && !isApplicationSubmitted
+  const shouldShowLeaderTeamSubmitAction =
+    isManagedTeamLeader && managedPendingTeam?.status === TEAM_STATUS_INITIAL
   const teamMemberIdsForCard = managedPendingTeam?.memberIds ?? (activeUserId ? [activeUserId] : [])
   const hasMultipleTeamMembers = teamMemberIdsForCard.length > 1
   const allOtherTeamMembersSubmitted = teamMemberIdsForCard
     .filter((memberId) => memberId !== activeUserId)
     .every((memberId) => applicantStatusesById[memberId] === APPLICANT_STATUS_SUBMITTED)
-  const canSubmitApplication = isManagedTeamLeader
-    ? hasMultipleTeamMembers && allOtherTeamMembersSubmitted
-    : true
+  const canSubmitApplication = true
+  const canSubmitTeamApplication =
+    shouldShowLeaderTeamSubmitAction &&
+    isApplicationSubmitted &&
+    hasMultipleTeamMembers &&
+    allOtherTeamMembersSubmitted
   const fallbackOwnName = `${form.prename.trim()} ${form.surname.trim()}`.trim()
   
   const resolveMemberName = (memberId: string): string => {
@@ -590,12 +596,26 @@ export function useApplicationForm() {
   }
 
   const handleSubmitApplicationAsTeamLeader = async () => {
+    await submitIndividualApplication(form)
+  }
+
+  const handleSubmitTeamApplicationAsTeamLeader = async () => {
     if (!managedPendingTeam || !activeUserId || !isManagedTeamLeader) {
       setError("Could not determine your managed team.")
       return
     }
 
-    if (!canSubmitApplication) {
+    if (!isApplicationSubmitted) {
+      setError("Submit your personal application before submitting the team application.")
+      return
+    }
+
+    if (!hasMultipleTeamMembers) {
+      setError("Your team must have at least one additional member before submission.")
+      return
+    }
+
+    if (!allOtherTeamMembersSubmitted) {
       setError("All other team members must submit before you can submit the team application.")
       return
     }
@@ -603,32 +623,15 @@ export function useApplicationForm() {
     setError("")
     setIsSubmitting(true)
 
-    const applicantSubmitted = await submitApplication(form)
-    if (!applicantSubmitted) {
-      setIsSubmitting(false)
-      setError("Could not submit your application. Please try again.")
-      return
-    }
-
     try {
       await submitPendingTeamApplication(managedPendingTeam.docId)
     } catch {
       setIsSubmitting(false)
-      setError("Your application was submitted, but team submission failed. Please try again.")
-      setApplicantStatus(APPLICANT_STATUS_SUBMITTED)
-      setApplicantStatusesById((currentStatuses) => ({
-        ...currentStatuses,
-        [activeUserId]: APPLICANT_STATUS_SUBMITTED,
-      }))
+      setError("Could not submit team application. Please try again.")
       return
     }
 
     setIsSubmitting(false)
-    setApplicantStatus(APPLICANT_STATUS_SUBMITTED)
-    setApplicantStatusesById((currentStatuses) => ({
-      ...currentStatuses,
-      [activeUserId]: APPLICANT_STATUS_SUBMITTED,
-    }))
   }
 
   const handleCompleteStep3 = async (
@@ -802,10 +805,12 @@ export function useApplicationForm() {
     shouldShowTeamCard,
     canLeaveManagedTeam,
     shouldShowJoinedMemberSubmitAction,
+    shouldShowLeaderTeamSubmitAction,
     teamMemberIdsForCard,
     hasMultipleTeamMembers,
     allOtherTeamMembersSubmitted,
     canSubmitApplication,
+    canSubmitTeamApplication,
     teamMemberNamesForCard,
     teamMemberStatusesForCard,
     
@@ -822,6 +827,7 @@ export function useApplicationForm() {
     handleSubmitApplicationAsTeamMember,
     handleProceedWithoutTeam,
     handleSubmitApplicationAsTeamLeader,
+    handleSubmitTeamApplicationAsTeamLeader,
     handleCompleteStep3,
     handleStep2FieldBlur,
   }
