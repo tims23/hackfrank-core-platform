@@ -9,6 +9,7 @@ import {
   persistentMultipleTabManager,
   terminate,
 } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDiUqm6AfvO43-1F6XSxffWprcj7jSJL1A',
@@ -22,6 +23,7 @@ const firebaseConfig = {
 
 export const firebaseApp = initializeApp(firebaseConfig)
 export const firebaseAuth = getAuth(firebaseApp)
+export const firebaseStorage = getStorage(firebaseApp)
 
 const firebaseDebugLogsEnabled =
   import.meta.env.DEV || import.meta.env.VITE_FIREBASE_DEBUG_LOGS === 'true'

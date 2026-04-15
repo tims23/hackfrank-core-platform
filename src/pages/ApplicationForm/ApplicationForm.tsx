@@ -118,8 +118,10 @@ export function ApplicationForm() {
                 isApplicationSubmitted={form.isApplicationSubmitted}
                 isStep2Complete={form.isStep2Complete}
                 isSubmitting={form.isSubmitting}
+                isUploadingCv={form.isUploadingCv}
                 error={form.error}
                 onUpdateField={form.updateField}
+                onUploadCv={form.uploadCurrentCv}
                 onFieldBlur={form.handleStep2FieldBlur}
                 onNextStep={form.handleSubmitStep2}
                 onPrevStep={() => form.setStep(1)}

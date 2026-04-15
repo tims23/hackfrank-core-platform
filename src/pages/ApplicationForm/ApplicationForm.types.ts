@@ -27,7 +27,6 @@ export type CreateTeamDraft = {
 }
 
 export type Step2Field =
-  | "currentCv"
   | "motivation"
   | "programmingSkillLevel"
   | "generalSkills"
@@ -124,6 +123,7 @@ export type ApplicationFormContextType = {
   isFinalizingStep3: boolean
   isLoggingOut: boolean
   isSubmitting: boolean
+  isUploadingCv: boolean
   applicantStatus: ApplicantStatus
   isFormDataLoading: boolean
   managedPendingTeam: PendingTeamRecord | null
@@ -155,6 +155,7 @@ export type ApplicationFormContextType = {
   
   // Handlers
   updateField: (field: keyof ApplicationFormState, value: string) => void
+  uploadCurrentCv: (file: File | null) => Promise<void>
   handleLogout: () => Promise<void>
   handleLeaveTeam: () => Promise<void>
   handleKickTeamMember: (memberId: string) => Promise<void>

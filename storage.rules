@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // CV uploads are only allowed in CV/{uid}/... as PDF files.
+    match /CV/{uid}/{filePath=**} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf');
+      allow delete: if isOwner(uid);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

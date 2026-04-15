@@ -16,6 +16,7 @@ import {
   type TeamSelectionMode,
 } from "../../../shared/types"
 import { subscribeToParticipants, type Participant } from "@/lib/participants"
+import { deleteApplicantCvByUrl, uploadApplicantCv } from "@/lib/cv"
 import {
   createPendingTeamFromApplication,
   joinPendingTeamByCode,
@@ -48,6 +49,7 @@ export function useApplicationForm() {
   const [isFinalizingStep3, setIsFinalizingStep3] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingCv, setIsUploadingCv] = useState(false)
   const [applicantStatus, setApplicantStatus] = useState<ApplicantStatus>(APPLICANT_STATUS_STARTED)
   const [isFormDataLoading, setIsFormDataLoading] = useState(true)
   const [managedPendingTeam, setManagedPendingTeam] = useState<PendingTeamRecord | null>(null)
@@ -301,6 +303,58 @@ export function useApplicationForm() {
       ...currentForm,
       [field]: value,
     }))
+  }
+
+  const uploadCurrentCv = async (file: File | null) => {
+    if (isApplicationSubmitted) {
+      return
+    }
+
+    if (!file) {
+      setError("Please select a PDF file to upload.")
+      return
+    }
+
+    if (!user?.uid) {
+      setError("Could not determine current user for CV upload.")
+      return
+    }
+
+    setError("")
+    setIsUploadingCv(true)
+    const previousCvUrl = form.currentCv.trim()
+
+    try {
+      const { downloadUrl } = await uploadApplicantCv(user.uid, file)
+
+      setForm((currentForm) => ({
+        ...currentForm,
+        currentCv: downloadUrl,
+      }))
+
+      const synced = await syncApplicationDraft({
+        currentCv: downloadUrl,
+      })
+
+      if (!synced) {
+        setError("CV was uploaded, but we could not save it to your draft.")
+        return
+      }
+
+      const normalizedCurrent = normalizeFormState({
+        ...form,
+        currentCv: downloadUrl,
+      })
+      lastPersistedFormRef.current = normalizedCurrent
+
+      if (previousCvUrl && previousCvUrl !== downloadUrl) {
+        await deleteApplicantCvByUrl(previousCvUrl)
+      }
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload CV. Please try again.")
+    } finally {
+      setIsUploadingCv(false)
+    }
   }
 
   const hasChangesForFields = (fields: Array<keyof ApplicationFormState>): boolean => {
@@ -783,6 +837,7 @@ export function useApplicationForm() {
     isFinalizingStep3,
     isLoggingOut,
     isSubmitting,
+    isUploadingCv,
     applicantStatus,
     isFormDataLoading,
     managedPendingTeam,
@@ -816,6 +871,7 @@ export function useApplicationForm() {
     
     // Handlers
     updateField,
+    uploadCurrentCv,
     handleLogout,
     handleLeaveTeam,
     handleKickTeamMember,
