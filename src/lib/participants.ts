@@ -116,12 +116,13 @@ export const subscribeToParticipantAccess = (
   onError?: (error: Error) => void,
 ) => {
   const normalizedUid = uid.trim()
-  const participantAccessDocRef = doc(firestoreDb, "participants", normalizedUid)
+  const participantAccessDocRef = doc(firestoreDb, "participants", normalizedUid, "details", "application")
 
   logFirebaseFetch("onSnapshot:subscribe", {
-    collection: "participants",
+    collection: "participants/details",
     targetUid: normalizedUid,
     mode: "participant-access",
+    documentId: "application",
   })
 
   return onSnapshot(
@@ -129,9 +130,10 @@ export const subscribeToParticipantAccess = (
     (snapshot) => {
       if (snapshot.metadata.fromCache) {
         logFirebaseFetch("onSnapshot:update", {
-          collection: "participants",
+          collection: "participants/details",
           targetUid: normalizedUid,
           mode: "participant-access",
+          documentId: "application",
           exists: snapshot.exists(),
           hasParticipantAccess: false,
           fromCache: true,
@@ -142,18 +144,21 @@ export const subscribeToParticipantAccess = (
         return
       }
       const matchedParticipantData = snapshot.data() as
-        | { id?: unknown; status?: unknown }
+        | { approved?: unknown; status?: unknown }
         | undefined
-      const participantUid = snapshot.id
       const participantStatus = parseParticipantStatus(matchedParticipantData?.status)
-      const hasParticipantAccess = participantUid === normalizedUid && participantStatus === "APPROVED"
+      const hasParticipantAccess =
+        snapshot.exists() &&
+        (matchedParticipantData?.approved === true || participantStatus.toUpperCase() === "APPROVED")
 
       logFirebaseFetch("onSnapshot:update", {
-        collection: "participants",
+        collection: "participants/details",
         targetUid: normalizedUid,
         mode: "participant-access",
+        documentId: "application",
         exists: snapshot.exists(),
         matchedParticipantDocId: snapshot.id,
+        approved: matchedParticipantData?.approved === true,
         participantStatus,
         hasParticipantAccess,
         fromCache: snapshot.metadata.fromCache,
@@ -163,9 +168,10 @@ export const subscribeToParticipantAccess = (
     },
     (snapshotError) => {
       logFirebaseFetch("onSnapshot:error", {
-        collection: "participants",
+        collection: "participants/details",
         targetUid: normalizedUid,
         mode: "participant-access",
+        documentId: "application",
         message: snapshotError.message,
       })
 
