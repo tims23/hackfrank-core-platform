@@ -15,9 +15,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /participants/{participantId}/details/{documentId} {
+    match /participants/{participantId}/details/application {
       allow read: if isOwner(participantId);
       allow write: if false;
+    }
+
+    match /participants/{participantId}/details/{documentId} {
+      allow read, write: if false;
     }
 
     match /teams/{teamId} {
