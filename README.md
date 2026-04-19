@@ -15,8 +15,8 @@ The platform supports:
 
 ## Technology
 - **Frontend:** React + Vite + shadcn/ui + TailwindCSS  
-- **Backend:** Node.js (coming soon)  
-- **Database:** MongoDB (coming soon)  
+- **Backend:** Node.js (Vercel serverless functions)  
+- **Database:** Firebase Firestore  
 
 ## Project Structure
 
@@ -24,16 +24,18 @@ The platform supports:
 hackfrank-core-platform-luis/
 ├── api/               # Vercel serverless API handlers
 │   ├── applicants.ts
+│   ├── participants.ts
 │   ├── teams.ts
 │   └── lib/           # Auth middleware + Firebase Admin helpers
 ├── src/               # Main React app source
 │   ├── components/    # UI, auth guards, layout, team components
 │   ├── contexts/      # React context providers
 │   ├── lib/           # Client helpers (firebase, api, data)
-│   ├── pages/         # Route pages (dashboard, cases, teams, profile, application)
-│   └── assets/
+│   ├── pages/         # Route pages
+│   ├── assets/
+│   └── main.tsx
+├── scripts/           # Build and utility scripts
 ├── public/            # Static files
-├── frontend/          # Legacy/transition folder
 ├── index.html
 ├── vite.config.ts
 ├── package.json
@@ -65,12 +67,12 @@ hackfrank-core-platform-luis/
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd hackfrank-core-platform
+cd hackfrank-core-platform-luis
 
-# Install frontend dependencies
-cd frontend
+# Install dependencies
 npm install
 
+# Set up environment variables (create .env.local with Firebase config)
 # Start development server
 npm run dev
 ```
@@ -80,18 +82,23 @@ The app will be available at `http://localhost:5173`
 ### Available Scripts
 
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run preview  # Preview production build
-npm run lint     # Run ESLint
+npm run dev           # Start development server
+npm run build         # Build for production
+npm run preview       # Preview production build
+npm run lint          # Run ESLint
+npm run dump:firestore # Export Firestore collections to JSON
 ```
 
 ## Pages
 
 - **Dashboard** (`/`) - Overview with stats, featured cases, and CTAs
+- **Login** (`/login`) - User authentication
+- **Register** (`/register`) - New user registration
+- **Profile** (`/profile`) - User profile management
+- **Participants** (`/participants`) - Browse event participants
 - **Teams** (`/teams`) - Browse and create teams
 - **Cases** (`/cases`) - View partner challenges
-- **Submissions** (`/submissions`) - Track project submissions and scores
+- **ApplicationForm** (`/apply`) - Multi-step project submission
 
 ## License
 
