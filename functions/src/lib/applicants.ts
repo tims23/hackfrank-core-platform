@@ -1,11 +1,11 @@
-import { db } from "./firebase-admin.ts"
+import { db } from "./firebase-admin.js"
 import { FieldValue } from "firebase-admin/firestore"
 import type {
   ApplicantFormInput,
   ApplicantProfileRecord,
   ApplicantRecord,
   ApplicantStatus,
-} from "../../shared/types.ts"
+} from "../shared/types.js"
 import {
   APPLICANT_STATUS_STARTED,
   APPLICANT_STATUS_SUBMITTED,
@@ -16,7 +16,7 @@ import {
   TEAM_SELECTION_MODE_INDIVIDUAL,
   TEAM_STATUS_APPLICATION_SUBMITTED,
   TEAM_STATUS_INITIAL,
-} from "../../shared/types.ts"
+} from "../shared/types.js"
 
 export type {
   ApplicantFormInput,
@@ -24,7 +24,7 @@ export type {
   ApplicantRecord,
   ApplicantStatus,
   TeamSelectionMode,
-} from "../../shared/types.ts"
+} from "../shared/types.js"
 
 const getParticipantApplicationDocRef = (uid: string) =>
   db.collection("participants").doc(uid).collection("details").doc("application")
@@ -140,7 +140,7 @@ const tryAutoSubmitFullTeamApplication = async (submitterId: string, teamCode: s
       updatedAt: FieldValue.serverTimestamp(),
     })
 
-    console.log("[api/lib/applicants] auto-submitted full team application", {
+    console.log("[functions/lib/applicants] auto-submitted full team application", {
       submitterId: normalizedSubmitterId,
       teamCode: normalizedTeamCode,
       teamDocId: freshTeamSnapshot.id,
@@ -150,7 +150,7 @@ const tryAutoSubmitFullTeamApplication = async (submitterId: string, teamCode: s
 }
 
 export async function fetchApplicantFormData(uid: string): Promise<ApplicantRecord | null> {
-  console.log("[api/lib/applicants] fetchApplicantFormData start", { uid })
+  console.log("[functions/lib/applicants] fetchApplicantFormData start", { uid })
 
   const [applicationSnapshot, profileSnapshot] = await Promise.all([
     getParticipantApplicationDocRef(uid).get(),
@@ -158,7 +158,7 @@ export async function fetchApplicantFormData(uid: string): Promise<ApplicantReco
   ])
 
   if (!applicationSnapshot.exists) {
-    console.log("[api/lib/applicants] fetchApplicantFormData missing", { uid })
+    console.log("[functions/lib/applicants] fetchApplicantFormData missing", { uid })
     return null
   }
 
@@ -218,7 +218,7 @@ export async function fetchApplicantFormData(uid: string): Promise<ApplicantReco
     skills,
   }
 
-  console.log("[api/lib/applicants] fetchApplicantFormData complete", {
+  console.log("[functions/lib/applicants] fetchApplicantFormData complete", {
     uid,
     status,
     hasData: true,
@@ -231,7 +231,7 @@ export async function submitApplicantForm(
   uid: string,
   applicant: ApplicantFormInput,
 ): Promise<void> {
-  console.log("[api/lib/applicants] submitApplicantForm start", { uid })
+  console.log("[functions/lib/applicants] submitApplicantForm start", { uid })
 
   const skills = applicant.generalSkills
     .split(",")
@@ -270,7 +270,7 @@ export async function submitApplicantForm(
     await tryAutoSubmitFullTeamApplication(uid, applicant.teamCode)
   }
 
-  console.log("[api/lib/applicants] submitApplicantForm complete", {
+  console.log("[functions/lib/applicants] submitApplicantForm complete", {
     uid,
     skillCount: skills.length,
   })
@@ -280,7 +280,7 @@ export async function syncApplicantDraft(
   uid: string,
   updates: Partial<ApplicantFormInput>,
 ): Promise<void> {
-  console.log("[api/lib/applicants] syncApplicantDraft start", {
+  console.log("[functions/lib/applicants] syncApplicantDraft start", {
     uid,
     updateKeys: Object.keys(updates),
   })
@@ -329,14 +329,14 @@ export async function syncApplicantDraft(
     profilePayload ? getParticipantProfileDocRef(uid).set(profilePayload, { merge: true }) : Promise.resolve(),
   ])
 
-  console.log("[api/lib/applicants] syncApplicantDraft complete", {
+  console.log("[functions/lib/applicants] syncApplicantDraft complete", {
     uid,
     payloadKeys: Object.keys(payload),
   })
 }
 
 export async function createApplicant(uid: string): Promise<void> {
-  console.log("[api/lib/applicants] createApplicant start", { uid })
+  console.log("[functions/lib/applicants] createApplicant start", { uid })
 
   await Promise.all([
     getParticipantApplicationDocRef(uid).set({
@@ -366,5 +366,5 @@ export async function createApplicant(uid: string): Promise<void> {
     }, { merge: true }),
   ])
 
-  console.log("[api/lib/applicants] createApplicant complete", { uid })
+  console.log("[functions/lib/applicants] createApplicant complete", { uid })
 }

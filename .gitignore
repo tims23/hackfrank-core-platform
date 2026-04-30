@@ -25,3 +25,8 @@ dist-ssr
 .vercel
 .env*.local
 firestore-dumps
+
+# Cloud Functions
+functions/dist
+functions/node_modules
+.env.production

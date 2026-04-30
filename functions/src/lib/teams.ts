@@ -1,6 +1,6 @@
-import { db } from "./firebase-admin.ts"
+import { db } from "./firebase-admin.js"
 import { FieldValue } from "firebase-admin/firestore"
-import type { PendingTeamRecord, TeamStatus } from "../../shared/types.ts"
+import type { PendingTeamRecord, TeamStatus } from "../shared/types.js"
 import {
   APPLICANT_STATUS_STARTED,
   APPLICANT_STATUS_SUBMITTED,
@@ -11,9 +11,9 @@ import {
   TEAM_SELECTION_MODE_INDIVIDUAL,
   TEAM_STATUS_APPLICATION_SUBMITTED,
   TEAM_STATUS_INITIAL,
-} from "../../shared/types.ts"
+} from "../shared/types.js"
 
-export type { PendingTeamRecord, TeamStatus } from "../../shared/types.ts"
+export type { PendingTeamRecord, TeamStatus } from "../shared/types.js"
 
 const TEAM_MAX_MEMBERS = 4
 
@@ -58,7 +58,7 @@ export async function createPendingTeamFromApplication(
   name: string,
   description: string,
 ): Promise<{ teamCode: string }> {
-  console.log("[api/lib/teams] createPendingTeamFromApplication start", {
+  console.log("[functions/lib/teams] createPendingTeamFromApplication start", {
     leaderId,
     maxMembers: TEAM_MAX_MEMBERS,
   })
@@ -84,7 +84,7 @@ export async function createPendingTeamFromApplication(
     updatedAt: FieldValue.serverTimestamp(),
   })
 
-  console.log("[api/lib/teams] createPendingTeamFromApplication complete", {
+  console.log("[functions/lib/teams] createPendingTeamFromApplication complete", {
     leaderId,
     teamCode,
     maxMembers: TEAM_MAX_MEMBERS,
@@ -97,7 +97,7 @@ export async function joinPendingTeamByCode(
   teamCode: string,
   applicantId: string,
 ): Promise<boolean> {
-  console.log("[api/lib/teams] joinPendingTeamByCode start", {
+  console.log("[functions/lib/teams] joinPendingTeamByCode start", {
     applicantId,
     teamCode,
   })
@@ -108,7 +108,7 @@ export async function joinPendingTeamByCode(
   await assertTeamSelectionOpen(normalizedApplicantId)
 
   if (!normalizedTeamCode || !normalizedApplicantId) {
-    console.warn("[api/lib/teams] joinPendingTeamByCode rejected invalid input", {
+    console.warn("[functions/lib/teams] joinPendingTeamByCode rejected invalid input", {
       applicantId,
       teamCode,
     })
@@ -124,7 +124,7 @@ export async function joinPendingTeamByCode(
 
   const matchedTeamDoc = teamsSnapshot.docs[0]
   if (!matchedTeamDoc) {
-    console.log("[api/lib/teams] joinPendingTeamByCode no matching team", {
+    console.log("[functions/lib/teams] joinPendingTeamByCode no matching team", {
       applicantId: normalizedApplicantId,
       teamCode: normalizedTeamCode,
     })
@@ -144,7 +144,7 @@ export async function joinPendingTeamByCode(
     }
 
     const memberIds = Array.isArray(teamData?.memberIds)
-      ? [...new Set(teamData.memberIds.flatMap((memberId) => {
+      ? [...new Set(teamData.memberIds.flatMap((memberId: unknown) => {
         if (typeof memberId === "string") {
           const normalizedMemberId = memberId.trim()
           return normalizedMemberId.length > 0 ? [normalizedMemberId] : []
@@ -178,7 +178,7 @@ export async function joinPendingTeamByCode(
     return false
   }
 
-  console.log("[api/lib/teams] joinPendingTeamByCode complete", {
+  console.log("[functions/lib/teams] joinPendingTeamByCode complete", {
     applicantId: normalizedApplicantId,
     teamCode: normalizedTeamCode,
     teamDocId: matchedTeamDoc.id,
@@ -188,7 +188,7 @@ export async function joinPendingTeamByCode(
 }
 
 export async function leavePendingTeam(teamDocId: string, memberId: string): Promise<void> {
-  console.log("[api/lib/teams] leavePendingTeam start", { teamDocId, memberId })
+  console.log("[functions/lib/teams] leavePendingTeam start", { teamDocId, memberId })
 
   const normalizedMemberId = memberId.trim()
 
@@ -214,7 +214,7 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
       ),
   ])
 
-  console.log("[api/lib/teams] leavePendingTeam complete", {
+  console.log("[functions/lib/teams] leavePendingTeam complete", {
     teamDocId,
     memberId: normalizedMemberId,
     applicationStatus: APPLICANT_STATUS_STARTED,
@@ -224,7 +224,7 @@ export async function leavePendingTeam(teamDocId: string, memberId: string): Pro
 }
 
 export async function kickPendingTeamMember(teamDocId: string, memberId: string): Promise<void> {
-  console.log("[api/lib/teams] kickPendingTeamMember start", { teamDocId, memberId })
+  console.log("[functions/lib/teams] kickPendingTeamMember start", { teamDocId, memberId })
 
   const normalizedMemberId = memberId.trim()
 
@@ -233,7 +233,7 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
   const teamStatus = normalizeTeamStatus(teamData?.status)
 
   if (teamStatus === TEAM_STATUS_APPLICATION_SUBMITTED) {
-    console.warn("[api/lib/teams] kickPendingTeamMember blocked for submitted team", {
+    console.warn("[functions/lib/teams] kickPendingTeamMember blocked for submitted team", {
       teamDocId,
       memberId: normalizedMemberId,
       teamStatus,
@@ -262,7 +262,7 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
       ),
   ])
 
-  console.log("[api/lib/teams] kickPendingTeamMember complete", {
+  console.log("[functions/lib/teams] kickPendingTeamMember complete", {
     teamDocId,
     memberId: normalizedMemberId,
     applicationStatus: APPLICANT_STATUS_STARTED,
@@ -272,7 +272,7 @@ export async function kickPendingTeamMember(teamDocId: string, memberId: string)
 }
 
 export async function submitPendingTeamApplication(teamDocId: string, leaderId: string): Promise<void> {
-  console.log("[api/lib/teams] submitPendingTeamApplication start", { teamDocId, leaderId })
+  console.log("[functions/lib/teams] submitPendingTeamApplication start", { teamDocId, leaderId })
 
   const normalizedLeaderId = leaderId.trim()
   const teamDocRef = db.collection("teams").doc(teamDocId)
@@ -301,7 +301,7 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
     }
 
     const memberIds = Array.isArray(teamData?.memberIds)
-      ? [...new Set(teamData.memberIds.flatMap((memberId) => {
+      ? [...new Set(teamData.memberIds.flatMap((memberId: unknown) => {
         if (typeof memberId === "string") {
           const normalizedMemberId = memberId.trim()
           return normalizedMemberId.length > 0 ? [normalizedMemberId] : []
@@ -354,7 +354,7 @@ export async function submitPendingTeamApplication(teamDocId: string, leaderId: 
     )
   })
 
-  console.log("[api/lib/teams] submitPendingTeamApplication complete", {
+  console.log("[functions/lib/teams] submitPendingTeamApplication complete", {
     teamDocId,
     leaderId: normalizedLeaderId,
     status: TEAM_STATUS_APPLICATION_SUBMITTED,

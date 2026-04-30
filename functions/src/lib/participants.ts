@@ -1,8 +1,8 @@
-import { db } from "./firebase-admin.ts"
-import type { SharedParticipantProfile } from "../../shared/types.ts"
-import { normalizeApplicantStatus } from "../../shared/types.ts"
+import { db } from "./firebase-admin.js"
+import type { SharedParticipantProfile } from "../shared/types.js"
+import { normalizeApplicantStatus } from "../shared/types.js"
 
-export type { SharedParticipantProfile } from "../../shared/types.ts"
+export type { SharedParticipantProfile } from "../shared/types.js"
 
 type TeamMembershipRecord = {
   memberIds?: unknown
